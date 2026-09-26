@@ -1,0 +1,302 @@
+[
+  {
+    "claim": {
+      "text": "Urban middle-class families, working couples, and individuals in nuclear families are the primary consumers of online groceries in India.",
+      "source_quote": "Urban middle-class families, working couples, and individuals in nuclear families are the primary consumers of online groceries.",
+      "page": 1,
+      "claim_type": "other"
+    },
+    "risk_score": 3,
+    "risk_reason": "General consumer description without numbers, peripheral to main argument and no source."
+  },
+  {
+    "claim": {
+      "text": "Internet access in India reached 895,000 users.",
+      "source_quote": "internet access, which reached 895,000 users.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 8,
+    "risk_reason": "Specific user count given without source, making verification hard and central to market size."
+  },
+  {
+    "claim": {
+      "text": "India\u2019s e-commerce is rapidly growing because of affordable data, rising smartphone use, and increasing internet access.",
+      "source_quote": "India\u2019s e-commerce is rapidly growing because of affordable data, rising smartphone use, and increasing internet access, which reached 895,000 users.",
+      "page": 2,
+      "claim_type": "causal"
+    },
+    "risk_score": 5,
+    "risk_reason": "Causal claim about growth drivers, no source, moderately central but lacks numeric detail."
+  },
+  {
+    "claim": {
+      "text": "E-commerce revenue in India is forecasted to reach $67 billion in 2025.",
+      "source_quote": "According to Statista, e-commerce revenue is forecasted to reach $67 billion in 2025.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 9,
+    "risk_reason": "Precise forecast revenue figure, central to argument, no cited source."
+  },
+  {
+    "claim": {
+      "text": "The online grocery market in India was valued at $8.8 billion in 2024.",
+      "source_quote": "The size of the online grocery market was valued at $8.8 billion in 2024 and is projected to increase 45 percent from 2025 to 2030.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 7,
+    "risk_reason": "Exact market valuation, key to narrative, unsupported by source."
+  },
+  {
+    "claim": {
+      "text": "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.",
+      "source_quote": "The size of the online grocery market was valued at $8.8 billion in 2024 and is projected to increase 45 percent from 2025 to 2030.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 10,
+    "risk_reason": "High\u2011impact projected growth percentage, core to pitch, no source or baseline."
+  },
+  {
+    "claim": {
+      "text": "Sales in India's e-commerce sector have been rising 18 percent annually from 2021 to 2025.",
+      "source_quote": "Sales have been rising 18 percent annually from 2021 to 2025 as digital payments are making online purchasing easy and accessible from anywhere.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 7,
+    "risk_reason": "Specific annual growth rate over several years, central claim, lacks citation."
+  },
+  {
+    "claim": {
+      "text": "Digital payments are making online purchasing easy and accessible, contributing to sales rising 18 percent annually from 2021 to 2025.",
+      "source_quote": "Sales have been rising 18 percent annually from 2021 to 2025 as digital payments are making online purchasing easy and accessible from anywhere.",
+      "page": 2,
+      "claim_type": "causal"
+    },
+    "risk_score": 5,
+    "risk_reason": "Causal link to digital payments, no source, moderately important."
+  },
+  {
+    "claim": {
+      "text": "Smaller cities and towns (Tier II and III) account for 60 percent of India's e-commerce market.",
+      "source_quote": "Smaller cities and towns (Tier II and III) now account for 60 percent of the market as online content is available in regional languages and last-mile delivery services are improving.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 6,
+    "risk_reason": "Clear market share percentage for Tier II/III cities, central but unsourced."
+  },
+  {
+    "claim": {
+      "text": "Food and non-alcoholic beverages are forecast to be the largest consumer spending category in India by 2028.",
+      "source_quote": "By 2028, food and non-alcoholic beverages are forecast to be the largest consumer spending category according to Euromonitor.",
+      "page": 2,
+      "claim_type": "comparative"
+    },
+    "risk_score": 7,
+    "risk_reason": "Comparative forecast of top spending category, specific and central, no source."
+  },
+  {
+    "claim": {
+      "text": "Walmart expanded its 60 percent share in Flipkart with a $1.2 billion investment.",
+      "source_quote": "For example, Walmart has expanded its 60 percent share in Flipkart with a $1.2 billion investment, while Amazon continues to invest, as they view India as a key long-term market.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 6,
+    "risk_reason": "Specific share increase and investment amount, key to competitive landscape, unsourced."
+  },
+  {
+    "claim": {
+      "text": "Swiggy committed $115.5 million to its supply chain subsidiary to support its Quick Commerce arm, Instamart.",
+      "source_quote": "Swiggy has committed $115.5 million to its supply chain subsidiary to support its growing Quick Commerce arm, Instamart.",
+      "page": 2,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Exact investment figure, relevant but peripheral and without citation."
+  },
+  {
+    "claim": {
+      "text": "Amazon India offers U.S. tree nuts under its private labels.",
+      "source_quote": "Platforms like Amazon India offer U.S. tree nuts under their private labels.",
+      "page": 2,
+      "claim_type": "other"
+    },
+    "risk_score": 1,
+    "risk_reason": "Minor product\u2011offering detail, no numbers, low impact on overall argument."
+  },
+  {
+    "claim": {
+      "text": "Quick commerce is projected to reach $5.3\u202fbillion in revenue by 2025.",
+      "source_quote": "Quick commerce is one of the fastest-growing segments, projected to reach $5.3 billion in revenue by 2025, according to Statista.",
+      "page": 3,
+      "claim_type": "numeric"
+    },
+    "risk_score": 6,
+    "risk_reason": "Forecasted revenue for quick commerce, central numeric claim, no source."
+  },
+  {
+    "claim": {
+      "text": "Quick commerce accounts for 5\u20116\u202fpercent of household grocery spending in urban cities.",
+      "source_quote": "where it accounts for 5-6 percent of household grocery spending.",
+      "page": 3,
+      "claim_type": "numeric"
+    },
+    "risk_score": 6,
+    "risk_reason": "Specific percentage of household spending, relevant but unsourced."
+  },
+  {
+    "claim": {
+      "text": "Swiggy Instamart, Blinkit, and Zepto together control over 85\u202fpercent of the quick commerce market.",
+      "source_quote": "Swiggy Instamart, Blinkit, and Zepto control over 85 percent of the market.",
+      "page": 3,
+      "claim_type": "numeric"
+    },
+    "risk_score": 7,
+    "risk_reason": "High market concentration figure, central to market dynamics, lacks citation."
+  },
+  {
+    "claim": {
+      "text": "Indian regulations require e-commerce platforms to clearly display the country of origin for each product.",
+      "source_quote": "Indian regulations require e-commerce platforms to clearly display where each product was made, which helps buyers know if they are buying U.S.-origin goods.",
+      "page": 3,
+      "claim_type": "other"
+    },
+    "risk_score": 2,
+    "risk_reason": "Regulatory detail, peripheral and non\u2011numeric."
+  },
+  {
+    "claim": {
+      "text": "Around 35 percent of consumers in India spend more on festive supplies, gifts, and specialty foods from September to December.",
+      "source_quote": "From September to December, when the country celebrates major festivals, around 35 percent of consumers spend more on festive supplies, gifts, and specialty foods.",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Specific festive\u2011spending percentage, moderately central, no source."
+  },
+  {
+    "claim": {
+      "text": "E-commerce platforms host sales events such as Amazon\u2019s Great Indian Festival and Flipkart\u2019s Big Billion Days.",
+      "source_quote": "E-commerce platforms host sales events, such as Amazon\u2019s Great Indian Festival and Flipkart\u2019s Big Billion Days.",
+      "page": 4,
+      "claim_type": "other"
+    },
+    "risk_score": 2,
+    "risk_reason": "General statement about sales events, peripheral."
+  },
+  {
+    "claim": {
+      "text": "Quick commerce platforms experience a spike in orders when people look for last\u2011minute items and make impulse purchases.",
+      "source_quote": "Quick commerce platforms experience a spike in orders as people look for last-minute items and tap into impulse purchases.",
+      "page": 4,
+      "claim_type": "causal"
+    },
+    "risk_score": 4,
+    "risk_reason": "Causal observation about order spikes, no numbers, moderate relevance."
+  },
+  {
+    "claim": {
+      "text": "Between 40 and 50 percent of Indian grocery consumers purchase packaged foods and groceries offline.",
+      "source_quote": "Packaged Foods/Groceries 40\u201350% 15\u201320% 30\u201345%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 6,
+    "risk_reason": "Range of offline purchase share, central to channel analysis, unsourced."
+  },
+  {
+    "claim": {
+      "text": "Between 15 and 20 percent of Indian grocery consumers purchase packaged foods and groceries online.",
+      "source_quote": "Packaged Foods/Groceries 40\u201350% 15\u201320% 30\u201345%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Range of online purchase share, relevant but lacks citation."
+  },
+  {
+    "claim": {
+      "text": "Between 30 and 45 percent of Indian grocery consumers purchase packaged foods and groceries through both offline and online channels (omnichannel).",
+      "source_quote": "Packaged Foods/Groceries 40\u201350% 15\u201320% 30\u201345%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Omnichannel purchase range, specific but no source."
+  },
+  {
+    "claim": {
+      "text": "Fresh Produce offline sales account for 70 to 80 percent",
+      "source_quote": "Fresh Produce 70\u201380% 5\u201310% 15\u201325%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Offline fresh produce sales range, numeric but unsourced."
+  },
+  {
+    "claim": {
+      "text": "Fresh Produce online sales account for 5 to 10 percent",
+      "source_quote": "Fresh Produce 70\u201380% 5\u201310% 15\u201325%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Online fresh produce sales range, specific yet no citation."
+  },
+  {
+    "claim": {
+      "text": "Fresh Produce omnichannel sales account for 15 to 25 percent",
+      "source_quote": "Fresh Produce 70\u201380% 5\u201310% 15\u201325%",
+      "page": 4,
+      "claim_type": "numeric"
+    },
+    "risk_score": 5,
+    "risk_reason": "Omnichannel fresh produce range, numeric, unsupported by source."
+  },
+  {
+    "claim": {
+      "text": "Quick commerce deliveries in Indian cities can take as little as 10 to 30 minutes.",
+      "source_quote": "Quick commerce has changed shopping in cities with deliveries in as little as 10\u201330 minutes, thanks to local \u201cdark stores\u201d and tech-driven logistics.",
+      "page": 5,
+      "claim_type": "numeric"
+    },
+    "risk_score": 7,
+    "risk_reason": "Delivery time window claim, central to quick commerce promise, no source."
+  },
+  {
+    "claim": {
+      "text": "India leads in digital payment systems, using Unified Payments Interface, wallets, and cash-on-delivery.",
+      "source_quote": "The country leads in digital payment systems, using Unified Payments Interface, wallets, and cash-on-delivery, which makes shopping easy for people in all regions and income groups\u2014even in smaller towns and villages.",
+      "page": 5,
+      "claim_type": "comparative"
+    },
+    "risk_score": 4,
+    "risk_reason": "Comparative claim about digital payment leadership, no data source."
+  },
+  {
+    "claim": {
+      "text": "Most grocery platforms in India work closely with neighborhood kirana stores.",
+      "source_quote": "Most platforms work closely with neighborhood kirana stores, which help with fast local delivery and managing inventory.",
+      "page": 5,
+      "claim_type": "other"
+    },
+    "risk_score": 2,
+    "risk_reason": "General partnership description, peripheral and non\u2011numeric."
+  },
+  {
+    "claim": {
+      "text": "Scheduled delivery slots reduce missed deliveries and make the grocery delivery process more efficient.",
+      "source_quote": "Scheduled delivery slots mean customers can choose when their groceries arrive, reducing missed deliveries and making the process more efficient.",
+      "page": 5,
+      "claim_type": "causal"
+    },
+    "risk_score": 3,
+    "risk_reason": "Causal claim about scheduled slots, low numeric detail and peripheral."
+  }
+]
