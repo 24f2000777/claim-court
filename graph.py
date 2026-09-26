@@ -25,7 +25,7 @@ graph.add_node("prosecutor_agent", prosecutor_agent)
 graph.add_node("prosecutor_tools", prosecutor_tool_node)
 graph.add_node("defender_agent", defender_agent)
 graph.add_node("defender_tools", defender_tool_node)
-graph.add_node("judge_node", judge)
+graph.add_node("judge_node", judge,defer=True)
 
 # ------------------------------------------------------------
 # 1. START -> prosecutor loop -> defender_agent
@@ -35,13 +35,14 @@ graph.add_edge(START, "prosecutor_agent")
 graph.add_conditional_edges(
     "prosecutor_agent",
     prosecutor_tools_condition,
-    {"tools": "prosecutor_tools", "__end__": "defender_agent"}
+    {"tools": "prosecutor_tools", "__end__": "judge_node"}
 )
 graph.add_edge("prosecutor_tools", "prosecutor_agent")   # loop back until no more tool calls
 
 # ------------------------------------------------------------
 # 2. defender loop -> judge_node
 # ------------------------------------------------------------
+graph.add_edge(START,"defender_agent")
 graph.add_conditional_edges(
     "defender_agent",
     defender_tools_condition,
