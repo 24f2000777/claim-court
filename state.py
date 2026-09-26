@@ -1,5 +1,7 @@
 from typing import TypedDict, Literal, Annotated
 from pydantic import BaseModel, Field
+from langgraph.graph.message import add_messages
+from langchain_core.messages import BaseMessage
 
 
 # ============================================================
@@ -41,3 +43,5 @@ class CourtState(TypedDict):
     prosecutor_case: str
     defender_case: str
     verdict: VerdictClass
+    prosecutor_messages:Annotated[list[BaseMessage],add_messages]
+    defender_messages:Annotated[list[BaseMessage],add_messages]

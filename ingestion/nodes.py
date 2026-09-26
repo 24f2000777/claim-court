@@ -40,6 +40,7 @@ for document in documents:
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
 
+
 chunks = []
 for page in pages:
     page_chunk = splitter.split_text(page["text"])
