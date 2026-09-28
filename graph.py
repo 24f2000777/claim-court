@@ -42,7 +42,11 @@ graph.add_edge("web_search", "grade_web")
 # ------------------------------------------------------------
 # 2. after grading: enough evidence -> both lawyers, else rewrite and search again
 # ------------------------------------------------------------
-graph.add_conditional_edges("grade_web", route_after_web_grade)
+graph.add_conditional_edges(
+    "grade_web",
+    route_after_web_grade,
+    ["prosecutor", "defender", "rewrite"],
+)
 graph.add_edge("rewrite", "web_search")  # retry loop
 
 # ------------------------------------------------------------
