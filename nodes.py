@@ -1,5 +1,6 @@
 import os
 import re
+import time
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -49,6 +50,19 @@ grader_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(
 # 3. helpers
 # ============================================================
 
+# calls the model, and on a rate limit (429) waits a little and tries again
+def call_with_retry(model, messages):
+    waits = [2, 5, 10, 20]
+    for attempt in range(len(waits)):
+        try:
+            return model.invoke(messages)
+        except Exception as e:
+            if "429" in str(e) or "rate_limit" in str(e).lower():
+                print(f"Rate limit hit, waiting {waits[attempt]}s")
+                time.sleep(waits[attempt])
+                continue
+            raise
+    raise RuntimeError("Rate limit: still failing after all retries")
 
 # neutral search query without the claim's figures
 def write_search_query(claim, previous_query=None):
@@ -57,7 +71,8 @@ def write_search_query(claim, previous_query=None):
         text += f"\n\nPrevious query (found little useful evidence): {previous_query}"
 
     try:
-        response = query_model.invoke(
+        response = call_with_retry(
+            query_model,
             [SystemMessage(content=query_writer_prompt), HumanMessage(content=text)]
         )
         query = (response.content or "").strip().strip('"')
@@ -127,7 +142,8 @@ def grade_doc(state: CourtState):
         return {"doc_evidence": []}
 
     try:
-        response = grader_model.invoke(
+        response = call_with_retry(
+            grader_model,
             [
                 SystemMessage(content=doc_grader_prompt),
                 HumanMessage(
@@ -169,7 +185,7 @@ def web_search(state: CourtState):
 
     items = []
     for item in result.get("results", []):
-        items.append({"source": item["url"], "text": item["content"][:1000]})
+        items.append({"source": item["url"], "text": item["content"][:600]})
 
     return {"search_query": query, "web_evidence": items}
 
@@ -181,7 +197,8 @@ def grade_web(state: CourtState):
         return {"web_evidence": [], "evidence_ok": False}
 
     try:
-        response = grader_model.invoke(
+        response = call_with_retry(
+            grader_model,
             [
                 SystemMessage(content=web_grader_prompt),
                 HumanMessage(
@@ -238,7 +255,7 @@ def prosecutor(state: CourtState):
     evidence = format_evidence(state)
 
     try:
-        response = prosecutor_model.invoke(
+        response = call_with_retry(prosecutor_model,
             [
                 SystemMessage(content=prosecutor_prompt),
                 HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
@@ -263,7 +280,7 @@ def defender(state: CourtState):
     evidence = format_evidence(state)
 
     try:
-        response = defender_model.invoke(
+        response = call_with_retry(defender_model,
             [
                 SystemMessage(content=defender_prompt),
                 HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
@@ -306,7 +323,7 @@ def judge(state: CourtState):
     last_error = None
     for _ in range(2):
         try:
-            response = judge_model.invoke(messages)
+            response = call_with_retry(judge_model,messages)
         except Exception as e:
             last_error = e
             continue
