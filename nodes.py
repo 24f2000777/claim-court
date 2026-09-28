@@ -64,16 +64,18 @@ def call_with_retry(model, messages):
             raise
     raise RuntimeError("Rate limit: still failing after all retries")
 
-# neutral search query without the claim's figures
-def write_search_query(claim, previous_query=None):
+# neutral search query without the claim's figures, optionally leaning "for" or "against"
+def write_search_query(claim, previous_query=None, stance=None):
     text = f"Claim: {claim}"
+    if stance:
+        text += f"\n\nStance: {stance}"
     if previous_query:
         text += f"\n\nPrevious query (found little useful evidence): {previous_query}"
 
     try:
         response = call_with_retry(
             query_model,
-            [SystemMessage(content=query_writer_prompt), HumanMessage(content=text)]
+            [SystemMessage(content=query_writer_prompt), HumanMessage(content=text)],
         )
         query = (response.content or "").strip().strip('"')
     except Exception as e:
@@ -173,22 +175,34 @@ def grade_doc(state: CourtState):
     return {"doc_evidence": kept}
 
 
-# after a rewrite search_query is already set, so it is reused
+# runs one search per stance, merges results and drops duplicate urls
 def web_search(state: CourtState):
-    query = state.get("search_query") or write_search_query(state["claim"])
+    saved = state.get("search_query")
 
-    try:
-        result = web_search_tool.invoke(query)
-    except Exception as e:
-        print(f"Web search failed: {e}")
-        return {"search_query": query, "web_evidence": []}
+    if saved and " | " in saved:
+        queries = saved.split(" | ")
+    else:
+        queries = [
+            write_search_query(state["claim"], stance="for"),
+            write_search_query(state["claim"], stance="against"),
+        ]
 
     items = []
-    for item in result.get("results", []):
-        items.append({"source": item["url"], "text": item["content"][:600]})
+    seen_urls = set()
+    for query in queries:
+        try:
+            result = web_search_tool.invoke(query)
+        except Exception as e:
+            print(f"Web search failed for '{query}': {e}")
+            continue
 
-    return {"search_query": query, "web_evidence": items}
+        for item in result.get("results", []):
+            if item["url"] in seen_urls:
+                continue
+            seen_urls.add(item["url"])
+            items.append({"source": item["url"], "text": item["content"][:600]})
 
+    return {"search_query": " | ".join(queries), "web_evidence": items}
 
 # drops irrelevant results (including the claim's own source), evidence_ok needs 2 relevant
 def grade_web(state: CourtState):
@@ -233,11 +247,18 @@ def grade_web(state: CourtState):
 
 
 def rewrite(state: CourtState):
-    new_query = write_search_query(
-        state["claim"], previous_query=state.get("search_query")
-    )
-    return {"search_query": new_query, "retry_count": state.get("retry_count", 0) + 1}
+    previous = state.get("search_query", "")
+    old_queries = previous.split(" | ")
 
+    new_for = write_search_query(state["claim"], previous_query=old_queries[0], stance="for")
+    new_against = write_search_query(
+        state["claim"], previous_query=old_queries[-1], stance="against"
+    )
+
+    return {
+        "search_query": f"{new_for} | {new_against}",
+        "retry_count": state.get("retry_count", 0) + 1,
+    }
 
 # enough evidence or out of retries: both lawyers, otherwise search again
 def route_after_web_grade(state: CourtState):

@@ -71,29 +71,30 @@ Format: plain text, 3 to 5 short points, under 200 words in total. Each point st
 
 judge_prompt = """You are the Judge in a fact-checking trial. You receive a claim, the Prosecutor's case against it, and the Defender's case for it. Decide how well the claim holds up.
 
-Important context: both cases were written from an AI model's memory. They have no sources, no access to the original document, and no verified data. Judge the quality of the reasoning, not the amount of detail or confidence in the writing.
+Important context: both lawyers argued only from evidence that was retrieved and graded before the trial. DOCUMENT evidence (label D) comes from the claim's own source, so it is context and not independent proof. INDEPENDENT WEB evidence (label W) comes from other sources. You cannot see the evidence itself, only how each lawyer used it. Judge the quality of the reasoning and how well each point is tied to a labelled source.
 
 How to decide:
-1. Read both cases fully before deciding. Do not favour the longer case, the more confident case, or the case that was written first.
-2. Treat specific numbers, dates, quotes, test results, and unnamed or named studies as unverified. Do not let them decide the outcome unless they are common knowledge that you are certain is correct. If a case's reasoning still stands without them, judge the reasoning.
-3. Do not add new evidence or new arguments of your own. Decide only on what the two sides said. You may use widely known facts only to notice an obvious error in a case.
-4. If a side says it found no honest defence or no substantive weakness, treat that as a concession, but still check whether the other side's case actually holds up.
-5. Penalise a case that redefines the claim's words or argues about a different claim. If a case argues for the opposite side, ignore those parts and do not count them as that side's strongest point.
-6. Notice when a case is only conditional (for example "the claim holds if the benchmark exists"). A conditional case shows the claim is possible, not that it is supported.
+1. Read both cases fully before deciding. Do not favour the longer case, the more confident case, or the one that argues better in style.
+2. A point that cites a label (W1, D1) and gives a specific figure or statement is stronger than a point with no label. If a lawyer states a figure without a label, do not let it decide the outcome.
+3. Check the arithmetic and the metric. A CAGR is not a total increase, and a figure for a bigger segment (for example total grocery) is not a figure for the claim's segment (for example online grocery). Penalise a lawyer who mixes them up.
+4. Notice wording. If the evidence supports a weaker statement than the claim makes (for example "up to" versus "committed", or "some" versus "all"), that is a real weakness of the claim.
+5. Do not add new evidence or new arguments of your own. Decide only on what the two sides said.
+6. If a side says it found no honest defence or no substantive weakness, treat that as a concession, but still check whether the other side's case holds up.
+7. If a case argues for the opposite side, ignore those parts and do not count them as that side's strongest point.
+8. A case that is only conditional ("the claim would hold if...") shows the claim is possible, not that it is supported.
 
 Choosing the label:
-- supported: the Defender's case is clearly stronger, it rests on reasoning or well-known facts and not on unverified details, and the Prosecutor found no real weakness or only minor ones.
-- unsupported: the Prosecutor's case is clearly stronger, or the Defender concedes, or the Defender offers only conditional or unverified points with nothing else behind them.
-- disputed: both sides make real, reasoned points. Choose it when the Prosecutor itself says the evidence is mixed or depends on context and the Defender gives a plausible case. A claim that is too broad (for example it says "always" or "everyone") but true in some settings is disputed, not unsupported.
-- Do not choose disputed just to avoid choosing. Do not choose unsupported just because a claim is broad or cites no source.
+- supported: at least one independent web source (W) matches the claim's figure, metric and segment, and the Prosecutor found no real weakness or only minor ones.
+- unsupported: no independent source matches the claim, or the independent evidence contradicts it, or the Defender concedes, or the Defender offers only conditional or unlabelled points.
+- disputed: the Prosecutor and the Defender each cite real labelled evidence pointing in opposite directions (for example one source shows a gain and another shows a drop), even if one side argues better. A claim that is too broad (for example it says "always" or "everyone") but true in some settings is also disputed.
+- Do not choose disputed just to avoid choosing. Do not choose unsupported only because the claim is broad or because one side argued better.
 
 Confidence:
-- Never go above 0.9, because no source was checked.
-- Go above 0.8 only if one side is clearly stronger and the outcome does not depend on unverified numbers or quotes.
+- Never go above 0.9, because the claim was not checked against primary data.
+- Go above 0.8 only if one side is clearly stronger and its main point is tied to a labelled source.
 - Go below 0.5 if the evidence is thin or the two cases are close.
 
-Reasoning: write 2 to 3 sentences. Name the strongest point from each side and say which one decided the outcome. If the outcome depends on something unverified, say so."""
-
+Reasoning: write 2 to 3 sentences. Name the strongest point from each side, with its label, and say which one decided the outcome."""
 
 query_writer_prompt = """You write web search queries for a fact-checking system.
 
@@ -103,7 +104,8 @@ Rules:
 - Do not copy the claim's specific figures (percentages, amounts of money, growth rates) into the query.
 - You may keep the geography, the topic, and the years.
 - Output only the query as one line, under 12 words. No quotes, no explanation.
-- If a previous query is given, write a query with different wording and a different angle, and focus on the specific segment named in the claim (for example online grocery, not total grocery). Do not repeat it."""
+- If a previous query is given, write a query with different wording and a different angle, and focus on the specific segment named in the claim (for example online grocery, not total grocery). Do not repeat it.
+- If a stance is given, write the query to find evidence of that kind. For "for", look for sources that report support, gains, or agreement with the claim's topic. For "against", look for sources that report limits, drops, criticism, or disagreement on the same topic. Keep the topic and geography the same in both cases, and still leave out the claim's specific figures."""
 
 
 doc_grader_prompt = """You are an evidence grader in a fact-checking system. You are given a claim and a numbered list of chunks retrieved from the document the claim came from. Grade how useful each chunk is for checking the claim.

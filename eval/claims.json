@@ -1,0 +1,32 @@
+[
+  {
+    "claim": "Earth goes around the Sun.",
+    "expected_label": "supported",
+    "source": "general"
+  },
+  {
+    "claim": "The Great Wall of China is visible from the Moon with the naked eye.",
+    "expected_label": "unsupported",
+    "source": "general"
+  },
+  {
+    "claim": "Remote work makes employees more productive.",
+    "expected_label": "disputed",
+    "source": "general"
+  },
+  {
+    "claim": "Swiggy committed $115.5 million to its supply chain subsidiary to support its Quick Commerce arm, Instamart.",
+    "expected_label": "supported",
+    "source": "usda"
+  },
+  {
+    "claim": "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.",
+    "expected_label": "unsupported",
+    "source": "usda"
+  },
+  {
+    "claim": "Internet access in India reached 895,000 users.",
+    "expected_label": "unsupported",
+    "source": "usda"
+  }
+]
