@@ -16,19 +16,9 @@ client=chromadb.PersistentClient(path="./my_chroma_db")
 collection=client.get_or_create_collection(name="usda_qcommerce",
                                            embedding_function=embedding_fn)
 
-texts=[]
-ids=[]
-metadata=[]
-
-for chunk in chunks:
-    texts.append(chunk["text"])
-
-for i in range(len(chunks)):
-    id=f"chunk_{i}"
-    ids.append(id)
-
-for chunk in chunks:
-    metadata.append({"page":chunk["page"]})
+texts=[chunk["text"] for chunk in chunks]
+ids=[f"chunk_{i}" for i in range(len(chunks))]
+metadata=[{"page":chunk["page"]} for chunk in chunks]
 
 # re-adding the same ids on every import just overwrites the existing entries, so this is safe to re-run
 collection.add(documents=texts,ids=ids,metadatas=metadata)

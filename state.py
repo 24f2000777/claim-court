@@ -45,3 +45,30 @@ class CourtState(TypedDict):
     verdict: VerdictClass
     prosecutor_messages:Annotated[list[BaseMessage],add_messages]
     defender_messages:Annotated[list[BaseMessage],add_messages]
+
+    search_query:str
+    retry_count: int
+    doc_evidence: list[dict]
+    web_evidence: list[dict]
+    evidence_ok: bool
+
+class ItemGrade(BaseModel):
+    item_number: int = Field(
+        description="The number of the evidence item as given in the input list (1, 2, 3, ...)"
+    )
+    grade: Literal["relevant", "ambiguous", "irrelevant"] = Field(
+        description=(
+            "'relevant' if the item is on the claim's topic and gives a figure, date or "
+            "statement that can be compared with the claim. "
+            "'ambiguous' if it is on the topic but too vague or incomplete to use. "
+            "'irrelevant' if it is off-topic, or is only the claim's own original source "
+            "restating the claim."
+        )
+    )
+    reason: str = Field(description="One short sentence explaining the grade")
+
+
+class EvidenceGrades(BaseModel):
+    grades: list[ItemGrade] = Field(
+        description="One grade for every evidence item number given in the input"
+    )

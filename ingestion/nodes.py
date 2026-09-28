@@ -23,8 +23,8 @@ pdf_path = "data/usda_qcommerce.pdf"
 loader = PyPDFLoader(pdf_path)
 documents = loader.load()
 
+# sanity check: make sure the PDF actually has extractable text before we bother chunking it
 all_pages_text = []
-
 for document in documents:
     all_pages_text.append(document.page_content)
 
@@ -33,20 +33,18 @@ cleaned_text = total_text.strip()
 if len(cleaned_text) < 50:
     raise ValueError("Not enough text in PDF")
 
+# PyPDFLoader pages are 0-indexed; bump to 1-indexed for human-readable citations later
 pages = []
 for document in documents:
     pages.append({"page": document.metadata["page"] + 1, "text": document.page_content})
 
-
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
 
-
+# split page by page (not the whole document at once) so every chunk keeps its page number
 chunks = []
 for page in pages:
     page_chunk = splitter.split_text(page["text"])
-
     for chunk in page_chunk:
-
         chunks.append({"page": page["page"], "text": chunk})
 
 
@@ -83,10 +81,10 @@ def claim_extractor(chunks):
 # ============================================================
 
 def extract_numbers(text):
-
     return set(re.findall(r"\d+(?:\.\d+)?", text))
 
 
+# two claims count as duplicates if they share a page, type, and the same set of numbers
 def deduplicate_claims(claims):
     unique_claims = []
     seen = set()
@@ -212,11 +210,11 @@ if __name__ == "__main__":
 
     cached = load_cache(cache_path)
     if cached is not None:
-        print("Cache mila, LLM call nahi ho rahi")
+        print("Cache hit, skipping the LLM pipeline")
         ranked_claims = cached
     else:
-        print("Cache nahi mila, poora pipeline chal raha hai")
-        result = claim_extractor(chunks)  # poore document par, chunks[:5] nahi
+        print("No cache found, running the full pipeline")
+        result = claim_extractor(chunks)  # runs on every chunk, not just a sample
         unique = deduplicate_claims(result["claims"])
         ranked = ranker(unique)
         ranked_claims = ranked["ranked_claims"]
