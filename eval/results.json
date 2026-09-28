@@ -2,42 +2,42 @@
   "Earth goes around the Sun.": {
     "label": "supported",
     "confidence": 0.86,
-    "reasoning": "The defender's strongest point is that the heliocentric model is the standard, widely accepted astronomical framework, affirmed by reputable sources like NASA, which directly supports the claim. The prosecutor's strongest point is merely that the cited sources lack direct data, but this does not overturn the overwhelming consensus and evidence for Earth's orbit, so the defender's reasoning prevails.",
+    "reasoning": "The defender's strongest point is the citation of stellar parallax as a direct geometric proof of Earth's motion (W3), which directly matches the claim. The prosecutor's strongest point is the claim that evidence is only indirect (W1), but the same sources actually provide direct observational support, making the prosecutor's argument weaker. Thus the claim is supported.",
     "retries": 0,
-    "web_items": 3
+    "web_items": 6
   },
   "The Great Wall of China is visible from the Moon with the naked eye.": {
     "label": "unsupported",
-    "confidence": 0.88,
-    "reasoning": "The prosecutor cites well\u2011known references (Snopes, Encyclopaedia\u202fBritannica, astronaut testimony) that the Great Wall cannot be seen with the naked eye from the Moon, and the defender concedes there is no defence. The defender's lack of any counter\u2011argument makes the prosecutor's case decisive.",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the astronaut testimony and scientific analyses (W3, W2) that directly state the wall is not visible from the Moon, while the defender offers no defence and concedes the same (no honest defence). The weight of independent web evidence contradicting the claim decides the outcome.",
     "retries": 0,
-    "web_items": 3
-  },
-  "Swiggy committed $115.5 million to its supply chain subsidiary to support its Quick Commerce arm, Instamart.": {
-    "label": "unsupported",
-    "confidence": 0.78,
-    "reasoning": "The prosecutor\u2019s strongest point is that the Reuters source only says Swiggy will invest \"up to\" 10\u202fbillion rupees, which means the amount is a ceiling, not a firm commitment, contradicting the claim\u2019s wording of a committed $115.5\u202fmillion. The defender\u2019s strongest point is that the same Reuters article reports the amount and purpose, but it does not address the conditional nature, so the prosecutor\u2019s argument about the claim overstating a firm commitment decides the outcome.",
-    "retries": 2,
-    "web_items": 3
-  },
-  "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
-    "label": "unsupported",
-    "confidence": 0.78,
-    "reasoning": "The defender's strongest point is that a 9% CAGR over five years yields roughly a 45% increase, but this miscalculates the compound effect (it would be about 53\u201154%). The prosecutor highlights the lack of independent verification and the metric mismatch, showing the claim rests on a flawed interpretation of the source. The prosecutor's reasoning therefore outweighs the defender's.",
-    "retries": 2,
-    "web_items": 2
-  },
-  "Internet access in India reached 895,000 users.": {
-    "label": "unsupported",
-    "confidence": 0.88,
-    "reasoning": "The Prosecutor shows that independent evidence places India's internet users in the hundreds of millions, making the 895,000 figure off by orders of magnitude, and notes the lack of source or definition. The Defender offers no defence, effectively conceding the claim is false. The Prosecutor's mismatch argument decides the outcome.",
-    "retries": 0,
-    "web_items": 3
+    "web_items": 4
   },
   "Remote work makes employees more productive.": {
     "label": "disputed",
-    "confidence": 0.75,
-    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10% drop in productivity for remote workers (W5), directly contradicting the claim. The defender\u2019s strongest point is the BLS analysis across 61 industries showing a positive link between remote\u2011work share and total\u2011factor productivity growth (W2). Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "confidence": 0.73,
+    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10\u202f% drop in productivity for fully remote workers (W5), which directly contradicts the claim. The defender\u2019s strongest point is the 77\u202f% self\u2011reported productivity increase from a large survey (W2), but it relies on subjective assessments. Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Swiggy plans to invest up to about $115 million in its supply chain subsidiary to support Instamart.": {
+    "label": "supported",
+    "confidence": 0.78,
+    "reasoning": "The defender\u2019s strongest point is the citation of W2 (and additionally W1) that explicitly links the up\u2011to\u201110\u202fbillion\u2011rupee ($115.47\u202fmillion) investment in Swiggy\u2019s supply\u2011chain subsidiary to the expansion of Instamart. The prosecutor\u2019s best argument is a single claim that W2 does not mention Instamart, which is not substantiated by any independent source and is outweighed by the defender\u2019s two sources. Therefore the claim is supported.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent forecast (W4) showing a 35.18% CAGR for online grocery 2025\u20112030, which implies a total growth far exceeding 45%, directly contradicting the claim. The defender\u2019s strongest point is the claim\u2019s own document (D1), which is not independent and provides no baseline, offering no evidence to support the specific 45% figure. The independent evidence outweighs the unverified source, leading to an unsupported judgment.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Internet access in India reached 895,000 users.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent web source W1, which reports over 1\u202fbillion internet subscribers in India, making the claim\u2019s 895,000 users off by three orders of magnitude. The defender\u2019s strongest point is a concession that no independent evidence matches the claim. The prosecutor\u2019s evidence decisively shows the claim is unsupported.",
     "retries": 0,
     "web_items": 5
   }

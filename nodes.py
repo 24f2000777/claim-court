@@ -243,7 +243,7 @@ def grade_web(state: CourtState):
             relevant_count += 1
         kept.append(item)
 
-    return {"web_evidence": kept, "evidence_ok": relevant_count >= 2}
+    return {"web_evidence": kept, "evidence_ok": relevant_count >= 1}
 
 
 def rewrite(state: CourtState):

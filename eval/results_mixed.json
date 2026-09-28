@@ -1,0 +1,44 @@
+{
+  "Earth goes around the Sun.": {
+    "label": "supported",
+    "confidence": 0.86,
+    "reasoning": "The defender's strongest point is that the heliocentric model is the standard, widely accepted astronomical framework, affirmed by reputable sources like NASA, which directly supports the claim. The prosecutor's strongest point is merely that the cited sources lack direct data, but this does not overturn the overwhelming consensus and evidence for Earth's orbit, so the defender's reasoning prevails.",
+    "retries": 0,
+    "web_items": 3
+  },
+  "The Great Wall of China is visible from the Moon with the naked eye.": {
+    "label": "unsupported",
+    "confidence": 0.88,
+    "reasoning": "The prosecutor cites well\u2011known references (Snopes, Encyclopaedia\u202fBritannica, astronaut testimony) that the Great Wall cannot be seen with the naked eye from the Moon, and the defender concedes there is no defence. The defender's lack of any counter\u2011argument makes the prosecutor's case decisive.",
+    "retries": 0,
+    "web_items": 3
+  },
+  "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
+    "label": "unsupported",
+    "confidence": 0.78,
+    "reasoning": "The defender's strongest point is that a 9% CAGR over five years yields roughly a 45% increase, but this miscalculates the compound effect (it would be about 53\u201154%). The prosecutor highlights the lack of independent verification and the metric mismatch, showing the claim rests on a flawed interpretation of the source. The prosecutor's reasoning therefore outweighs the defender's.",
+    "retries": 2,
+    "web_items": 2
+  },
+  "Internet access in India reached 895,000 users.": {
+    "label": "unsupported",
+    "confidence": 0.88,
+    "reasoning": "The Prosecutor shows that independent evidence places India's internet users in the hundreds of millions, making the 895,000 figure off by orders of magnitude, and notes the lack of source or definition. The Defender offers no defence, effectively conceding the claim is false. The Prosecutor's mismatch argument decides the outcome.",
+    "retries": 0,
+    "web_items": 3
+  },
+  "Remote work makes employees more productive.": {
+    "label": "disputed",
+    "confidence": 0.75,
+    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10% drop in productivity for remote workers (W5), directly contradicting the claim. The defender\u2019s strongest point is the BLS analysis across 61 industries showing a positive link between remote\u2011work share and total\u2011factor productivity growth (W2). Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Swiggy plans to invest up to about $115 million in its supply chain subsidiary to support Instamart.": {
+    "label": "supported",
+    "confidence": 0.86,
+    "reasoning": "The defender\u2019s strongest point is the independent web sources (W1, W2) that state Swiggy will invest up to INR\u202f1,000\u202fcrore (~$115\u202fmillion) in its supply\u2011chain subsidiary and link the funding to the expansion of Instamart, directly matching the claim\u2019s wording. The prosecutor\u2019s strongest point is the rounding inconsistency and the \u201cup to\u201d nuance (W1, W2), but these do not contradict the claim\u2019s \u201cup to about $115\u202fmillion\u201d phrasing, so the defender\u2019s evidence decides the outcome.",
+    "retries": 0,
+    "web_items": 4
+  }
+}
