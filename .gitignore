@@ -4,3 +4,4 @@ __pycache__/
 .env
 ingestion/__pycache__/
 my_chroma_db/
+show_graph.py
