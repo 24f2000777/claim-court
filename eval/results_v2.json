@@ -1,0 +1,44 @@
+{
+  "Earth goes around the Sun.": {
+    "label": "supported",
+    "confidence": 0.86,
+    "reasoning": "The defender's strongest point is the citation of stellar parallax as a direct geometric proof of Earth's motion (W3), which directly matches the claim. The prosecutor's strongest point is the claim that evidence is only indirect (W1), but the same sources actually provide direct observational support, making the prosecutor's argument weaker. Thus the claim is supported.",
+    "retries": 0,
+    "web_items": 6
+  },
+  "The Great Wall of China is visible from the Moon with the naked eye.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the astronaut testimony and scientific analyses (W3, W2) that directly state the wall is not visible from the Moon, while the defender offers no defence and concedes the same (no honest defence). The weight of independent web evidence contradicting the claim decides the outcome.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Remote work makes employees more productive.": {
+    "label": "disputed",
+    "confidence": 0.73,
+    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10\u202f% drop in productivity for fully remote workers (W5), which directly contradicts the claim. The defender\u2019s strongest point is the 77\u202f% self\u2011reported productivity increase from a large survey (W2), but it relies on subjective assessments. Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Swiggy plans to invest up to about $115 million in its supply chain subsidiary to support Instamart.": {
+    "label": "supported",
+    "confidence": 0.78,
+    "reasoning": "The defender\u2019s strongest point is the citation of W2 (and additionally W1) that explicitly links the up\u2011to\u201110\u202fbillion\u2011rupee ($115.47\u202fmillion) investment in Swiggy\u2019s supply\u2011chain subsidiary to the expansion of Instamart. The prosecutor\u2019s best argument is a single claim that W2 does not mention Instamart, which is not substantiated by any independent source and is outweighed by the defender\u2019s two sources. Therefore the claim is supported.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent forecast (W4) showing a 35.18% CAGR for online grocery 2025\u20112030, which implies a total growth far exceeding 45%, directly contradicting the claim. The defender\u2019s strongest point is the claim\u2019s own document (D1), which is not independent and provides no baseline, offering no evidence to support the specific 45% figure. The independent evidence outweighs the unverified source, leading to an unsupported judgment.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Internet access in India reached 895,000 users.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent web source W1, which reports over 1\u202fbillion internet subscribers in India, making the claim\u2019s 895,000 users off by three orders of magnitude. The defender\u2019s strongest point is a concession that no independent evidence matches the claim. The prosecutor\u2019s evidence decisively shows the claim is unsupported.",
+    "retries": 0,
+    "web_items": 5
+  }
+}

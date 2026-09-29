@@ -2,43 +2,53 @@
   "Earth goes around the Sun.": {
     "label": "supported",
     "confidence": 0.86,
-    "reasoning": "The defender's strongest point is the citation of stellar parallax as a direct geometric proof of Earth's motion (W3), which directly matches the claim. The prosecutor's strongest point is the claim that evidence is only indirect (W1), but the same sources actually provide direct observational support, making the prosecutor's argument weaker. Thus the claim is supported.",
+    "reasoning": "The defender's strongest point is the citation of W3, which directly states that heliocentric theory asserts Earth revolves around the Sun, matching the claim. The prosecutor's strongest point is W2, which notes modern refinements but does not contradict the basic heliocentric fact. The direct supporting evidence outweighs the nuance argument, leading to a supported verdict.",
     "retries": 0,
     "web_items": 6
   },
   "The Great Wall of China is visible from the Moon with the naked eye.": {
     "label": "unsupported",
-    "confidence": 0.86,
-    "reasoning": "The prosecutor\u2019s strongest point is the astronaut testimony and scientific analyses (W3, W2) that directly state the wall is not visible from the Moon, while the defender offers no defence and concedes the same (no honest defence). The weight of independent web evidence contradicting the claim decides the outcome.",
+    "confidence": 0.88,
+    "reasoning": "The prosecutor's strongest point cites multiple independent web sources (e.g., W2, W3) that explicitly state the Great Wall is not visible from the Moon, and astronaut testimony corroborates this. The defender offers no evidence and concedes no honest defence. The weight of independent evidence against the claim decides the outcome.",
     "retries": 0,
-    "web_items": 4
+    "web_items": 6
   },
   "Remote work makes employees more productive.": {
     "label": "disputed",
     "confidence": 0.73,
-    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10\u202f% drop in productivity for fully remote workers (W5), which directly contradicts the claim. The defender\u2019s strongest point is the 77\u202f% self\u2011reported productivity increase from a large survey (W2), but it relies on subjective assessments. Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "reasoning": "The prosecutor\u2019s strongest point is the contradictory evidence from studies showing no productivity gain or declines (W4, W5), which directly challenges the claim. The defender\u2019s strongest point is the large\u2011scale study of 800,000 employees indicating productivity remained stable or improved (W2). Because credible independent sources support opposite conclusions, the claim is neither clearly true nor false, making it disputed.",
     "retries": 0,
     "web_items": 5
   },
   "Swiggy plans to invest up to about $115 million in its supply chain subsidiary to support Instamart.": {
     "label": "supported",
-    "confidence": 0.78,
-    "reasoning": "The defender\u2019s strongest point is the citation of W2 (and additionally W1) that explicitly links the up\u2011to\u201110\u202fbillion\u2011rupee ($115.47\u202fmillion) investment in Swiggy\u2019s supply\u2011chain subsidiary to the expansion of Instamart. The prosecutor\u2019s best argument is a single claim that W2 does not mention Instamart, which is not substantiated by any independent source and is outweighed by the defender\u2019s two sources. Therefore the claim is supported.",
+    "confidence": 0.86,
+    "reasoning": "The defender\u2019s strongest point is the citation of independent Reuters reports (W1, W2) that Swiggy will invest up to INR\u202f1,000\u202fcrore (~$115.47\u202fmillion) in its supply\u2011chain subsidiary and tie the funding to Instamart. The prosecutor\u2019s strongest point is a stylistic critique about the phrase \u201cup to about\u201d and lack of timeline, which does not contradict the independent evidence. The matching amount and purpose from the independent sources outweigh the prosecutor\u2019s minor concerns, so the claim is supported.",
     "retries": 0,
-    "web_items": 4
+    "web_items": 5
   },
   "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
     "label": "unsupported",
     "confidence": 0.86,
-    "reasoning": "The prosecutor\u2019s strongest point is the independent forecast (W4) showing a 35.18% CAGR for online grocery 2025\u20112030, which implies a total growth far exceeding 45%, directly contradicting the claim. The defender\u2019s strongest point is the claim\u2019s own document (D1), which is not independent and provides no baseline, offering no evidence to support the specific 45% figure. The independent evidence outweighs the unverified source, leading to an unsupported judgment.",
+    "reasoning": "The prosecutor\u2019s strongest point is that independent web sources (W5, W3, W1) either project far higher growth (over 500% increase or CAGR ~35\u201137%) or refer to the total grocery market, not a 45% rise for online grocery (W5, W3, W1). The defender concedes no honest defence and offers no evidence supporting the claim. The lack of any independent source matching the 45% projection leads to the claim being unsupported.",
     "retries": 0,
-    "web_items": 4
+    "web_items": 5
   },
   "Internet access in India reached 895,000 users.": {
     "label": "unsupported",
     "confidence": 0.86,
-    "reasoning": "The prosecutor\u2019s strongest point is the independent web source W1, which reports over 1\u202fbillion internet subscribers in India, making the claim\u2019s 895,000 users off by three orders of magnitude. The defender\u2019s strongest point is a concession that no independent evidence matches the claim. The prosecutor\u2019s evidence decisively shows the claim is unsupported.",
+    "reasoning": "The prosecutor\u2019s strongest point cites multiple independent web sources (e.g., W1, W2) showing internet users in India in the hundreds of millions, directly contradicting the claim\u2019s figure of 895,000; the defender\u2019s best argument merely reinterprets the claim as a typo without any labeled source confirming 895\u202fmillion. The lack of any independent evidence matching the stated 895,000 figure makes the claim unsupported.",
     "retries": 0,
-    "web_items": 5
+    "web_items": 6
+  },
+  "Coffee is good for health.": {
+    "label": "disputed",
+    "confidence": 0.78,
+    "reasoning": "The defender's strongest point is the multiple independent studies (e.g., W1, W2, W4) showing lower risk of kidney disease, liver disease, cardiovascular disease, and longer lifespan with moderate coffee intake, while the prosecutor's strongest point is the evidence of serious harms at high consumption (e.g., increased premature death risk with 28 cups/week, W6). Because the claim is an overly broad universal statement and the evidence is mixed\u2014benefits at moderate doses but risks at high doses\u2014the claim is disputed.",
+    "retries": 0,
+    "web_items": 6
+  },
+  "Nuclear power is safe.": {
+    "error": "Prosecutor LLM call failed: Rate limit: still failing after all retries"
   }
 }

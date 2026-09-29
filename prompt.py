@@ -85,9 +85,9 @@ How to decide:
 
 Choosing the label:
 - supported: at least one independent web source (W) matches the claim's figure, metric and segment, and the Prosecutor found no real weakness or only minor ones.
-- unsupported: no independent source matches the claim, or the independent evidence contradicts it, or the Defender concedes, or the Defender offers only conditional or unlabelled points.
-- disputed: the Prosecutor and the Defender each cite real labelled evidence pointing in opposite directions (for example one source shows a gain and another shows a drop), even if one side argues better. A claim that is too broad (for example it says "always" or "everyone") but true in some settings is also disputed.
-- Do not choose disputed just to avoid choosing. Do not choose unsupported only because the claim is broad or because one side argued better.
+- disputed: the Prosecutor and the Defender each cite real labelled evidence pointing in opposite directions (for example one source shows a gain and another shows a drop), even if one side argues better. Also choose disputed when the evidence supports a narrower version of the claim than what it states (for example the claim says "Indian cities" but the evidence only supports "major metro cities", or the claim says "good for health" but the evidence only supports "in moderate amounts"). In that case the claim is neither fully true nor fully false, it is true only under a narrower reading than stated.
+- unsupported: no independent source matches the claim's topic and segment at all, or the independent evidence directly contradicts the claim with no narrower reading available, or the Defender concedes with no independent evidence of their own, or the Defender offers only conditional or unlabelled points with nothing else behind them.
+- Do not choose disputed just to avoid choosing. Do not choose unsupported only because the claim is broad, because one side argued better, or because the evidence supports a narrower reading, use disputed for that case instead.
 
 Confidence:
 - Never go above 0.9, because the claim was not checked against primary data.
@@ -95,18 +95,6 @@ Confidence:
 - Go below 0.5 if the evidence is thin or the two cases are close.
 
 Reasoning: write 2 to 3 sentences. Name the strongest point from each side, with its label, and say which one decided the outcome."""
-
-query_writer_prompt = """You write web search queries for a fact-checking system.
-
-You are given a claim. Write ONE search query that finds independent sources on the claim's topic.
-
-Rules:
-- Do not copy the claim's specific figures (percentages, amounts of money, growth rates) into the query.
-- You may keep the geography, the topic, and the years.
-- Output only the query as one line, under 12 words. No quotes, no explanation.
-- If a previous query is given, write a query with different wording and a different angle, and focus on the specific segment named in the claim (for example online grocery, not total grocery). Do not repeat it.
-- If a stance is given, write the query to find evidence of that kind. For "for", look for sources that report support, gains, or agreement with the claim's topic. For "against", look for sources that report limits, drops, criticism, or disagreement on the same topic. Keep the topic and geography the same in both cases, and still leave out the claim's specific figures."""
-
 
 doc_grader_prompt = """You are an evidence grader in a fact-checking system. You are given a claim and a numbered list of chunks retrieved from the document the claim came from. Grade how useful each chunk is for checking the claim.
 
@@ -133,3 +121,18 @@ Rules:
 2. Judge topic, segment and independence only. Do not judge whether the result proves or disproves the claim.
 3. Output only the item number, the grade, and one short sentence as the reason. Never copy or rewrite the result text.
 4. Grade each result on its own. Do not give every result the same grade."""
+
+# ============================================================
+# QUERY WRITER PROMPT (writes neutral web search queries)
+# ============================================================
+
+query_writer_prompt = """You write web search queries for a fact-checking system.
+
+You are given a claim. Write ONE search query that finds independent sources on the claim's topic.
+
+Rules:
+- Do not copy the claim's specific figures (percentages, amounts of money, growth rates) into the query.
+- You may keep the geography, the topic, and the years.
+- Output only the query as one line, under 12 words. No quotes, no explanation.
+- If a previous query is given, write a query with different wording and a different angle, and focus on the specific segment named in the claim (for example online grocery, not total grocery). Do not repeat it.
+- If a stance is given, write the query to find evidence of that kind. For "for", look for sources that report support, gains, or agreement with the claim's topic. For "against", look for sources that report limits, drops, criticism, or disagreement on the same topic. Keep the topic and geography the same in both cases, and still leave out the claim's specific figures."""

@@ -1,0 +1,86 @@
+{
+  "Earth goes around the Sun.": {
+    "label": "supported",
+    "confidence": 0.86,
+    "reasoning": "The defender's strongest point is the citation of stellar parallax as a direct geometric proof of Earth's motion (W3), which directly matches the claim. The prosecutor's strongest point is the claim that evidence is only indirect (W1), but the same sources actually provide direct observational support, making the prosecutor's argument weaker. Thus the claim is supported.",
+    "retries": 0,
+    "web_items": 6
+  },
+  "The Great Wall of China is visible from the Moon with the naked eye.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the astronaut testimony and scientific analyses (W3, W2) that directly state the wall is not visible from the Moon, while the defender offers no defence and concedes the same (no honest defence). The weight of independent web evidence contradicting the claim decides the outcome.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Remote work makes employees more productive.": {
+    "label": "disputed",
+    "confidence": 0.73,
+    "reasoning": "The prosecutor\u2019s strongest point is the Stanford study reporting a 10\u202f% drop in productivity for fully remote workers (W5), which directly contradicts the claim. The defender\u2019s strongest point is the 77\u202f% self\u2011reported productivity increase from a large survey (W2), but it relies on subjective assessments. Because credible independent sources support opposite conclusions, the claim remains disputed.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Swiggy plans to invest up to about $115 million in its supply chain subsidiary to support Instamart.": {
+    "label": "supported",
+    "confidence": 0.78,
+    "reasoning": "The defender\u2019s strongest point is the citation of W2 (and additionally W1) that explicitly links the up\u2011to\u201110\u202fbillion\u2011rupee ($115.47\u202fmillion) investment in Swiggy\u2019s supply\u2011chain subsidiary to the expansion of Instamart. The prosecutor\u2019s best argument is a single claim that W2 does not mention Instamart, which is not substantiated by any independent source and is outweighed by the defender\u2019s two sources. Therefore the claim is supported.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent forecast (W4) showing a 35.18% CAGR for online grocery 2025\u20112030, which implies a total growth far exceeding 45%, directly contradicting the claim. The defender\u2019s strongest point is the claim\u2019s own document (D1), which is not independent and provides no baseline, offering no evidence to support the specific 45% figure. The independent evidence outweighs the unverified source, leading to an unsupported judgment.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Internet access in India reached 895,000 users.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent web source W1, which reports over 1\u202fbillion internet subscribers in India, making the claim\u2019s 895,000 users off by three orders of magnitude. The defender\u2019s strongest point is a concession that no independent evidence matches the claim. The prosecutor\u2019s evidence decisively shows the claim is unsupported.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Nuclear power is safe.": {
+    "label": "disputed",
+    "confidence": 0.7,
+    "reasoning": "The defender's strongest point is W1, which cites seven decades of low accident risk, while the prosecutor's strongest point is W4, documenting a serious safety breach at Zaporizhzhia. Because credible independent sources support both safety and notable incidents, the claim that nuclear power is safe is contested.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Humans use only 10 percent of their brains.": {
+    "label": "unsupported",
+    "confidence": 0.92,
+    "reasoning": "The prosecutor's strongest point is that multiple independent web sources (W1\u2011W4) explicitly label the 10\u202f% claim as a myth and provide no data supporting it, showing the claim lacks empirical backing. The defender offers no defence, conceding the lack of evidence. This decisive lack of supporting evidence makes the claim unsupported.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Vaccines cause autism.": {
+    "label": "unsupported",
+    "confidence": 0.88,
+    "reasoning": "The prosecutor's strongest point is the citation of multiple independent web sources (e.g., W1, W2, W4) that report large-scale studies finding no causal link between vaccines and autism. The defender offers no defence and concedes that all independent evidence contradicts the claim, making the prosecutor's evidence decisive.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Water boils at 100 degrees Celsius at sea level.": {
+    "label": "supported",
+    "confidence": 0.88,
+    "reasoning": "The Prosecutor cites multiple independent web sources (W1\u2011W3) confirming water boils at 100\u202f\u00b0C at sea level, with no identified weaknesses. The Defender also points to the same independent sources (W1\u2011W3) supporting the claim. The consistent independent evidence on both sides makes the claim well\u2011supported.",
+    "retries": 0,
+    "web_items": 3
+  },
+  "Coffee is good for health.": {
+    "label": "disputed",
+    "confidence": 0.78,
+    "reasoning": "The prosecutor\u2019s strongest point is the dosage limitation from W5, which shows that excessive coffee (28 cups/week) raises mortality risk, undermining a blanket health claim. The defender\u2019s strongest point is the meta\u2011analysis in W4 reporting a 16% lower all\u2011cause death risk for moderate (3\u20115 cups) drinkers, supporting health benefits only under specific conditions. Because the evidence backs a narrower, moderate\u2011intake benefit but not an unconditional \u201cgood for health\u201d claim, the claim is disputed.",
+    "retries": 0,
+    "web_items": 6
+  },
+  "Quick commerce deliveries in Indian cities can take as little as 10 to 30 minutes.": {
+    "label": "supported",
+    "confidence": 0.86,
+    "reasoning": "The defender's strongest point is the media analysis (W5) that states 10\u2011minute delivery is a common feature in major Indian cities, directly matching the claim's figure, metric and segment. The prosecutor's strongest point (W3) only notes regulatory push\u2011back and lacks direct contradictory timing data, so the defender's evidence decides the outcome.",
+    "retries": 0,
+    "web_items": 6
+  }
+}

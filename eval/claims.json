@@ -28,5 +28,35 @@
     "claim": "Internet access in India reached 895,000 users.",
     "expected_label": "unsupported",
     "source": "usda"
+  },
+  {
+    "claim": "Coffee is good for health.",
+    "expected_label": "disputed",
+    "source": "general"
+  },
+  {
+    "claim": "Nuclear power is safe.",
+    "expected_label": "disputed",
+    "source": "general"
+  },
+  {
+    "claim": "Humans use only 10 percent of their brains.",
+    "expected_label": "unsupported",
+    "source": "general"
+  },
+  {
+    "claim": "Vaccines cause autism.",
+    "expected_label": "unsupported",
+    "source": "general"
+  },
+  {
+    "claim": "Water boils at 100 degrees Celsius at sea level.",
+    "expected_label": "supported",
+    "source": "general"
+  },
+  {
+    "claim": "Quick commerce deliveries in Indian cities can take as little as 10 to 30 minutes.",
+    "expected_label": "supported",
+    "source": "usda"
   }
 ]
