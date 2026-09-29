@@ -48,6 +48,9 @@ class CourtState(TypedDict):
     doc_evidence: list[dict]
     web_evidence: list[dict]
     evidence_ok: bool
+    citation_notes: list[dict]
+
+    
 
 class ItemGrade(BaseModel):
     item_number: int = Field(
@@ -68,4 +71,22 @@ class ItemGrade(BaseModel):
 class EvidenceGrades(BaseModel):
     grades: list[ItemGrade] = Field(
         description="One grade for every evidence item number given in the input"
+    )
+
+
+class CitationCheck(BaseModel):
+    label: str = Field(
+        description="The evidence label being checked, for example W1 or D2, exactly as it appeared in the case."
+    )
+    verified: bool = Field(
+        description="True if the evidence text actually supports or contains what the lawyer's sentence claimed. False if the evidence says something different, says nothing about it, or is used out of context."
+    )
+    reason: str = Field(
+        description="One short sentence comparing what was claimed to what the evidence actually says."
+    )
+
+
+class CitationChecks(BaseModel):
+    checks: list[CitationCheck] = Field(
+        description="One verification result for every label that was checked."
     )

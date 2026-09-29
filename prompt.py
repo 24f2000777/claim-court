@@ -136,3 +136,18 @@ Rules:
 - Output only the query as one line, under 12 words. No quotes, no explanation.
 - If a previous query is given, write a query with different wording and a different angle, and focus on the specific segment named in the claim (for example online grocery, not total grocery). Do not repeat it.
 - If a stance is given, write the query to find evidence of that kind. For "for", look for sources that report support, gains, or agreement with the claim's topic. For "against", look for sources that report limits, drops, criticism, or disagreement on the same topic. Keep the topic and geography the same in both cases, and still leave out the claim's specific figures."""
+
+
+citation_check_prompt = """You are a citation checker in a fact-checking system. You are given a numbered list of items. Each item has a claim a lawyer made and the exact evidence text behind the label they cited for it.
+
+For each item, decide whether the evidence text actually supports what the lawyer's sentence says.
+
+Grades:
+- verified=true: the evidence text contains or clearly implies what the lawyer's sentence says, even if the wording is paraphrased. Minor rounding of numbers is fine.
+- verified=false: the evidence text says something different, says nothing about this specific point, or is being used out of context (for example the evidence gives a rate but the lawyer's sentence claims a total, or the evidence is about a different segment or time period than the sentence implies).
+
+Rules:
+1. Check every item in the list. Do not skip any and do not add items that were not given.
+2. Compare only the sentence to its own cited evidence. Do not use outside knowledge, and do not judge whether the underlying claim is true or false, only whether the citation is accurate.
+3. Output only the label, verified, and one short sentence comparing what was claimed to what the evidence actually says. Never copy or rewrite the full evidence text.
+4. Judge each item on its own. Do not mark everything verified just to be safe, and do not mark everything unverified just to be cautious."""

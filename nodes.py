@@ -4,7 +4,6 @@ import time
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 
 from prompt import (
@@ -14,10 +13,11 @@ from prompt import (
     prosecutor_prompt,
     query_writer_prompt,
     web_grader_prompt,
+    citation_check_prompt
 )
 from retrieval.vectorstore import retrieve_top_chunks
 from retrieval.websearch import web_search_tool
-from state import CourtState, EvidenceGrades, VerdictClass
+from state import CourtState, EvidenceGrades, VerdictClass,CitationChecks
 
 load_dotenv()
 
@@ -27,29 +27,31 @@ load_dotenv()
 # ============================================================
 
 MODEL_NAME = os.getenv("MODEL_NAME")
-GEMINI_MODEL = "gemini-3.8-flash"  # fallback for when Groq's quota is exhausted
+SECONDARY_MODEL = "openai/gpt-oss-20b"  # Groq fallback, different daily quota than MODEL_NAME
 MAX_RETRIES = 2
-DEBUG = True  # prints grader decisions
-
+DEBUG = True
 
 # ============================================================
-# 2. models (Groq primary, Gemini fallback for every role)
+# 2. models (Groq primary, Groq secondary fallback for every role)
 # ============================================================
 
 prosecutor_model = ChatGroq(model=MODEL_NAME, temperature=0.3)
-prosecutor_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.3)
+prosecutor_fallback = ChatGroq(model=SECONDARY_MODEL, temperature=0.3)
 
 defender_model = ChatGroq(model=MODEL_NAME, temperature=0.3)
-defender_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.3)
+defender_fallback = ChatGroq(model=SECONDARY_MODEL, temperature=0.3)
 
 judge_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(VerdictClass)
-judge_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0).with_structured_output(VerdictClass)
+judge_fallback = None  # gpt-oss-20b's tool-calling is unreliable for structured output
 
 query_model = ChatGroq(model=MODEL_NAME, temperature=0)
-query_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0)
+query_fallback = ChatGroq(model=SECONDARY_MODEL, temperature=0)
 
 grader_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(EvidenceGrades)
-grader_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0).with_structured_output(EvidenceGrades)
+grader_fallback = None
+
+checker_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(CitationChecks)
+checker_fallback = None
 
 
 # ============================================================
@@ -71,29 +73,13 @@ def call_with_retry(model, messages, fallback_model=None):
             raise
 
     if fallback_model is not None:
-        print("Primary model exhausted, falling back to Gemini")
+        print("Primary model exhausted, falling back to secondary model")
         try:
             return fallback_model.invoke(messages)
         except Exception as e:
             raise RuntimeError(f"Both primary and fallback model failed: {e}") from e
 
     raise RuntimeError("Rate limit: still failing after all retries")
-
-
-# extracts plain text whether content is a string (Groq) or a list of parts (Gemini)
-def extract_text(response):
-    content = response.content
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for part in content:
-            if isinstance(part, dict) and part.get("type") == "text":
-                parts.append(part.get("text", ""))
-            elif isinstance(part, str):
-                parts.append(part)
-        return "".join(parts)
-    return str(content) if content else ""
 
 
 # neutral search query without the claim's figures, optionally leaning "for" or "against"
@@ -110,7 +96,7 @@ def write_search_query(claim, previous_query=None, stance=None):
             [SystemMessage(content=query_writer_prompt), HumanMessage(content=text)],
             fallback_model=query_fallback,
         )
-        query = extract_text(response).strip().strip('"')
+        query = (response.content or "").strip().strip('"')
     except Exception as e:
         print(f"Query writer failed: {e}")
         query = ""
@@ -149,6 +135,37 @@ def format_evidence(state: CourtState):
         "INDEPENDENT WEB EVIDENCE:\n"
         f"{web_text}"
     )
+
+# finds every (W1), (D2) style label in a case's text, with the sentence it appeared in
+def extract_citations(case_text):
+    # split into sentences on '. ' so each citation stays with its own claim
+    sentences = re.split(r"(?<=[.!?])\s+", case_text)
+
+    citations = []
+    for sentence in sentences:
+        labels = re.findall(r"\((D|W)(\d+)\)", sentence)
+        for prefix, number in labels:
+            citations.append({
+                "label": f"{prefix}{number}",
+                "claimed": sentence.strip(),
+            })
+    return citations
+
+# looks up a label's actual evidence text from doc_evidence / web_evidence
+def resolve_label(label, state):
+    prefix = label[0]
+    index = int(label[1:]) - 1  # labels are 1-indexed (W1 = index 0)
+
+    if prefix == "D":
+        items = state.get("doc_evidence", [])
+    elif prefix == "W":
+        items = state.get("web_evidence", [])
+    else:
+        return None
+
+    if 0 <= index < len(items):
+        return items[index]["text"]
+    return None
 
 
 # ============================================================
@@ -324,7 +341,7 @@ def prosecutor(state: CourtState):
     except Exception as e:
         raise RuntimeError(f"Prosecutor LLM call failed: {e}") from e
 
-    case = extract_text(response).strip()
+    case = (response.content or "").strip()
     if not case:
         raise ValueError("Prosecutor returned an empty case")
 
@@ -351,7 +368,7 @@ def defender(state: CourtState):
     except Exception as e:
         raise RuntimeError(f"Defender LLM call failed: {e}") from e
 
-    case = extract_text(response).strip()
+    case = (response.content or "").strip()
     if not case:
         raise ValueError("Defender returned an empty case")
 
@@ -398,9 +415,102 @@ def judge(state: CourtState):
 
 
 # ============================================================
-# 8. manual test (python3 nodes.py)
+# 8. citation verification (checks that each (W1)/(D2) label actually supports its claim)
 # ============================================================
 
+
+def verify_citations(state: CourtState):
+    prosecutor_citations = extract_citations(state.get("prosecutor_case", ""))
+    for c in prosecutor_citations:
+        c["side"] = "prosecutor"
+
+    defender_citations = extract_citations(state.get("defender_case", ""))
+    for c in defender_citations:
+        c["side"] = "defender"
+
+    all_citations = prosecutor_citations + defender_citations
+    if not all_citations:
+        return {"citation_notes": []}
+
+    citation_notes = []
+    to_check = []
+
+    for c in all_citations:
+        evidence_text = resolve_label(c["label"], state)
+        if evidence_text is None:
+            # label doesn't exist in doc_evidence/web_evidence, no LLM call needed
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": False,
+                "reason": "Label does not exist in the evidence given to this trial.",
+            })
+        else:
+            c["evidence_text"] = evidence_text
+            to_check.append(c)
+
+    if not to_check:
+        return {"citation_notes": citation_notes}
+
+    lines = []
+    for i, c in enumerate(to_check):
+        lines.append(
+            f"{i+1}. Label: {c['label']} | Claimed: {c['claimed']} | Evidence: {c['evidence_text']}"
+        )
+    text = "\n".join(lines)
+
+    try:
+        response = call_with_retry(
+            checker_model,
+            [
+                SystemMessage(content=citation_check_prompt),
+                HumanMessage(content=text),
+            ],
+            fallback_model=checker_fallback,
+        )
+    except Exception as e:
+        print(f"Citation check failed: {e}")
+        # can't verify, so mark these as unverified rather than silently dropping them
+        for c in to_check:
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": False,
+                "reason": "Citation check failed to run.",
+            })
+        return {"citation_notes": citation_notes}
+
+    # match the LLM's checks back to the citations by label (checks are unordered)
+    checks_by_label = {check.label: check for check in response.checks}
+
+    for c in to_check:
+        check = checks_by_label.get(c["label"])
+        if check is None:
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": False,
+                "reason": "No verification result returned for this label.",
+            })
+        else:
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": check.verified,
+                "reason": check.reason,
+            })
+
+    return {"citation_notes": citation_notes}
+
 if __name__ == "__main__":
-    response = query_fallback.invoke("Say hello in one word.")
-    print(extract_text(response))
+    fake_state = {
+        "prosecutor_case": "The market grew slowly (W1).",
+        "defender_case": "The market is strong (W1) and growing (D1).",
+        "doc_evidence": [{"source": "doc", "text": "The document says nothing about growth speed."}],
+        "web_evidence": [{"source": "web", "text": "Market analysts report 9% annual growth."}],
+    }
+    print(verify_citations(fake_state))

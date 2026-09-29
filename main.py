@@ -25,3 +25,8 @@ print(response["defender_case"])
 print("=" * 100)
 print("VERDICT:")
 print(response["verdict"])
+print("=" * 100)
+print("CITATION CHECK:")
+for note in response.get("citation_notes", []):
+    status = "OK" if note["verified"] else "FAIL"
+    print(f"[{status}] {note['side']} ({note['label']}): {note['reason']}")

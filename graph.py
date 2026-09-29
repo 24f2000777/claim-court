@@ -10,6 +10,7 @@ from nodes import (
     rewrite,
     route_after_web_grade,
     web_search,
+    verify_citations,
 )
 from state import CourtState
 
@@ -30,6 +31,7 @@ graph.add_node("rewrite", rewrite)
 graph.add_node("prosecutor", prosecutor)
 graph.add_node("defender", defender)
 graph.add_node("judge_node", judge, defer=True)  # waits for both lawyers
+graph.add_node("verify_citations", verify_citations)
 
 # ------------------------------------------------------------
 # 1. clerk: straight line up to grade_web
@@ -54,6 +56,7 @@ graph.add_edge("rewrite", "web_search")  # retry loop
 # ------------------------------------------------------------
 graph.add_edge("prosecutor", "judge_node")
 graph.add_edge("defender", "judge_node")
-graph.add_edge("judge_node", END)
+graph.add_edge("judge_node", "verify_citations")
+graph.add_edge("verify_citations", END)
 
 court_graph = graph.compile()
