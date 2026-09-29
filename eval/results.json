@@ -54,5 +54,22 @@
     "reasoning": "The defender's strongest point is W2, which shows zero civilian deaths from U.S. reactors, supporting a narrow safety claim. The prosecutor's strongest point is W1, which highlights safety doubts after Three\u2011Mile Island, indicating broader safety concerns. Because the evidence supports only a limited aspect of safety while contradicting it on other dimensions, the claim is disputed.",
     "retries": 0,
     "web_items": 3
+  },
+  "Humans use only 10 percent of their brains.": {
+    "label": "unsupported",
+    "confidence": 0.86,
+    "reasoning": "The prosecutor\u2019s strongest point is the independent neuroscience evidence that the entire brain is active (W1), directly contradicting the 10% claim. The defender\u2019s best argument is merely a concession that the same web evidence debunks the myth (W1). With no independent source supporting the claim and both sides citing contrary evidence, the claim is unsupported.",
+    "retries": 0,
+    "web_items": 5
+  },
+  "Vaccines cause autism.": {
+    "label": "unsupported",
+    "confidence": 0.88,
+    "reasoning": "The prosecutor's strongest point is the large Danish register study (W4) showing no association between vaccines and autism, which directly refutes the claim. The defender offers no independent evidence supporting the claim, merely noting the lack of a defence. With no supporting evidence, the claim is unsupported.",
+    "retries": 0,
+    "web_items": 4
+  },
+  "Water boils at 100 degrees Celsius at sea level.": {
+    "error": "Judge failed after retry: Rate limit: still failing after all retries"
   }
 }
