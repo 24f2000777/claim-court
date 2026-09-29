@@ -4,6 +4,7 @@ import time
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 
 from prompt import (
@@ -26,32 +27,38 @@ load_dotenv()
 # ============================================================
 
 MODEL_NAME = os.getenv("MODEL_NAME")
+GEMINI_MODEL = "gemini-3.8-flash"  # fallback for when Groq's quota is exhausted
 MAX_RETRIES = 2
 DEBUG = True  # prints grader decisions
 
 
 # ============================================================
-# 2. models
+# 2. models (Groq primary, Gemini fallback for every role)
 # ============================================================
 
 prosecutor_model = ChatGroq(model=MODEL_NAME, temperature=0.3)
+prosecutor_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.3)
+
 defender_model = ChatGroq(model=MODEL_NAME, temperature=0.3)
-judge_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(
-    VerdictClass
-)
+defender_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.3)
+
+judge_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(VerdictClass)
+judge_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0).with_structured_output(VerdictClass)
 
 query_model = ChatGroq(model=MODEL_NAME, temperature=0)
-grader_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(
-    EvidenceGrades
-)
+query_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0)
+
+grader_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(EvidenceGrades)
+grader_fallback = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0).with_structured_output(EvidenceGrades)
 
 
 # ============================================================
 # 3. helpers
 # ============================================================
 
-# calls the model, and on a rate limit (429) waits a little and tries again
-def call_with_retry(model, messages):
+
+# calls the model, retries on rate limit, and falls back to a secondary model if given
+def call_with_retry(model, messages, fallback_model=None):
     waits = [2, 5, 10, 20]
     for attempt in range(len(waits)):
         try:
@@ -62,7 +69,32 @@ def call_with_retry(model, messages):
                 time.sleep(waits[attempt])
                 continue
             raise
+
+    if fallback_model is not None:
+        print("Primary model exhausted, falling back to Gemini")
+        try:
+            return fallback_model.invoke(messages)
+        except Exception as e:
+            raise RuntimeError(f"Both primary and fallback model failed: {e}") from e
+
     raise RuntimeError("Rate limit: still failing after all retries")
+
+
+# extracts plain text whether content is a string (Groq) or a list of parts (Gemini)
+def extract_text(response):
+    content = response.content
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                parts.append(part.get("text", ""))
+            elif isinstance(part, str):
+                parts.append(part)
+        return "".join(parts)
+    return str(content) if content else ""
+
 
 # neutral search query without the claim's figures, optionally leaning "for" or "against"
 def write_search_query(claim, previous_query=None, stance=None):
@@ -76,8 +108,9 @@ def write_search_query(claim, previous_query=None, stance=None):
         response = call_with_retry(
             query_model,
             [SystemMessage(content=query_writer_prompt), HumanMessage(content=text)],
+            fallback_model=query_fallback,
         )
-        query = (response.content or "").strip().strip('"')
+        query = extract_text(response).strip().strip('"')
     except Exception as e:
         print(f"Query writer failed: {e}")
         query = ""
@@ -151,7 +184,8 @@ def grade_doc(state: CourtState):
                 HumanMessage(
                     content=f"Claim: {state['claim']}\n\nChunks:\n{number_items(evidence)}"
                 ),
-            ]
+            ],
+            fallback_model=grader_fallback,
         )
     except Exception as e:
         print(f"Doc grading failed, keeping all chunks: {e}")
@@ -204,7 +238,8 @@ def web_search(state: CourtState):
 
     return {"search_query": " | ".join(queries), "web_evidence": items}
 
-# drops irrelevant results (including the claim's own source), evidence_ok needs 2 relevant
+
+# drops irrelevant results (including the claim's own source); evidence_ok needs 1 relevant
 def grade_web(state: CourtState):
     evidence = state.get("web_evidence", [])
     if not evidence:
@@ -218,7 +253,8 @@ def grade_web(state: CourtState):
                 HumanMessage(
                     content=f"Claim: {state['claim']}\n\nResults:\n{number_items(evidence)}"
                 ),
-            ]
+            ],
+            fallback_model=grader_fallback,
         )
     except Exception as e:
         print(f"Web grading failed: {e}")
@@ -260,6 +296,7 @@ def rewrite(state: CourtState):
         "retry_count": state.get("retry_count", 0) + 1,
     }
 
+
 # enough evidence or out of retries: both lawyers, otherwise search again
 def route_after_web_grade(state: CourtState):
     if state.get("evidence_ok") or state.get("retry_count", 0) >= MAX_RETRIES:
@@ -276,16 +313,18 @@ def prosecutor(state: CourtState):
     evidence = format_evidence(state)
 
     try:
-        response = call_with_retry(prosecutor_model,
+        response = call_with_retry(
+            prosecutor_model,
             [
                 SystemMessage(content=prosecutor_prompt),
                 HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
-            ]
+            ],
+            fallback_model=prosecutor_fallback,
         )
     except Exception as e:
         raise RuntimeError(f"Prosecutor LLM call failed: {e}") from e
 
-    case = (response.content or "").strip()
+    case = extract_text(response).strip()
     if not case:
         raise ValueError("Prosecutor returned an empty case")
 
@@ -301,16 +340,18 @@ def defender(state: CourtState):
     evidence = format_evidence(state)
 
     try:
-        response = call_with_retry(defender_model,
+        response = call_with_retry(
+            defender_model,
             [
                 SystemMessage(content=defender_prompt),
                 HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
-            ]
+            ],
+            fallback_model=defender_fallback,
         )
     except Exception as e:
         raise RuntimeError(f"Defender LLM call failed: {e}") from e
 
-    case = (response.content or "").strip()
+    case = extract_text(response).strip()
     if not case:
         raise ValueError("Defender returned an empty case")
 
@@ -344,7 +385,7 @@ def judge(state: CourtState):
     last_error = None
     for _ in range(2):
         try:
-            response = call_with_retry(judge_model,messages)
+            response = call_with_retry(judge_model, messages, fallback_model=judge_fallback)
         except Exception as e:
             last_error = e
             continue
@@ -361,10 +402,5 @@ def judge(state: CourtState):
 # ============================================================
 
 if __name__ == "__main__":
-    fake_state = {
-        "claim": "The online grocery market in India is projected to increase by 45 percent from 2025 to 2030."
-    }
-    for step in (retrieve_docs, grade_doc, web_search, grade_web):
-        fake_state.update(step(fake_state))
-    print("doc:", len(fake_state["doc_evidence"]), "web:", len(fake_state["web_evidence"]))
-    print("evidence_ok:", fake_state["evidence_ok"])
+    response = query_fallback.invoke("Say hello in one word.")
+    print(extract_text(response))

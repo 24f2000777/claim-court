@@ -49,6 +49,10 @@
     "web_items": 6
   },
   "Nuclear power is safe.": {
-    "error": "Prosecutor LLM call failed: Rate limit: still failing after all retries"
+    "label": "disputed",
+    "confidence": 0.71,
+    "reasoning": "The defender's strongest point is W2, which shows zero civilian deaths from U.S. reactors, supporting a narrow safety claim. The prosecutor's strongest point is W1, which highlights safety doubts after Three\u2011Mile Island, indicating broader safety concerns. Because the evidence supports only a limited aspect of safety while contradicting it on other dimensions, the claim is disputed.",
+    "retries": 0,
+    "web_items": 3
   }
 }
