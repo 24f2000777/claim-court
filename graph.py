@@ -68,6 +68,7 @@ graph.add_edge("chat_node", END)
 
 conn=sqlite3.connect("checkpoint.db",check_same_thread=False)
 checkpointer=SqliteSaver(conn=conn)
+checkpointer.setup()  # creates the tables on a fresh database, before anything queries them
 court_graph = graph.compile(checkpointer=checkpointer,interrupt_before=["judge_node"])
 
 
