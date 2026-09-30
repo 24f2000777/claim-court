@@ -7,10 +7,12 @@ from nodes import (
     grade_doc,
     grade_web,
     judge,
+    chat_node,
     prosecutor,
     retrieve_docs,
     rewrite,
     route_after_web_grade,
+    route_start,
     web_search,
     verify_citations,
 )
@@ -34,11 +36,12 @@ graph.add_node("prosecutor", prosecutor)
 graph.add_node("defender", defender)
 graph.add_node("judge_node", judge, defer=True)  # waits for both lawyers
 graph.add_node("verify_citations", verify_citations)
+graph.add_node("chat_node", chat_node)
 
 # ------------------------------------------------------------
-# 1. clerk: straight line up to grade_web
+# 1. clerk: straight line up to grade_web (a chat message on a finished trial skips to chat_node)
 # ------------------------------------------------------------
-graph.add_edge(START, "retrieve_docs")
+graph.add_conditional_edges(START, route_start, ["retrieve_docs", "chat_node"])
 graph.add_edge("retrieve_docs", "grade_doc")
 graph.add_edge("grade_doc", "web_search")
 graph.add_edge("web_search", "grade_web")
@@ -60,8 +63,19 @@ graph.add_edge("prosecutor", "judge_node")
 graph.add_edge("defender", "judge_node")
 graph.add_edge("judge_node", "verify_citations")
 graph.add_edge("verify_citations", END)
+graph.add_edge("chat_node", END)
 
 
 conn=sqlite3.connect("checkpoint.db",check_same_thread=False)
 checkpointer=SqliteSaver(conn=conn)
 court_graph = graph.compile(checkpointer=checkpointer,interrupt_before=["judge_node"])
+
+
+def list_thread_ids(limit=15):
+    """Saved trials, most recently active first."""
+    with checkpointer.lock:
+        rows = conn.execute(
+            "SELECT thread_id FROM checkpoints GROUP BY thread_id ORDER BY MAX(checkpoint_id) DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [row[0] for row in rows]

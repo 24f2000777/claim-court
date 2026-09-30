@@ -14,7 +14,7 @@ Adversarial multi-agent fact-checking system built with LangGraph, RAG, and Groq
 ## Project structure
 claim-court/
 ├── main.py # CLI entry point, runs a single claim through the trial graph
-├── app.py # Streamlit web UI: PDF upload, claim extraction, trial, chat, sidebar time travel (get_state_history)
+├── app.py # Streamlit web UI: PDF upload, claim extraction, trial, chat, sidebar conversations (new/resume/delete), sidebar time travel (get_state_history)
 ├── state.py # CourtState, VerdictClass, EvidenceGrades, CitationChecks
 ├── prompt.py # all prompts: prosecutor, defender, judge, graders, query writer, citation checker
 ├── nodes.py # graph nodes: retrieval, grading, lawyers, judge, citation verification
@@ -35,6 +35,8 @@ claim-court/
 
 ## Graph flow
 retrieve_docs → grade_doc → web_search → grade_web → (rewrite loop if evidence weak) → prosecutor + defender (parallel) → judge_node (interrupt here for human review) → verify_citations → END
+
+A conditional edge at START (`route_start`) sends a chat message on a finished trial to `chat_node → END`. Chat history lives in `CourtState.messages` (`add_messages`) and is saved by the SQLite checkpointer, so there is no separate chat database.
 
 ## Key design decisions
 - Retrieval is deterministic and pre-graded (not agent tool-calling) — grading uses batched LLM calls (one call per stage, not per-chunk) to conserve Groq free-tier quota.

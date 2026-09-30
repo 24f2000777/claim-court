@@ -75,6 +75,24 @@ flowchart TD
     class START,END edge
 ```
 
+After the verdict, follow-up questions take a second route through the same graph: a conditional edge at `START` sends a chat message straight to `chat_node`, which answers from the saved trial record and then ends.
+
+```mermaid
+flowchart LR
+    S([START]) --> RT{route_start}
+    RT -- "new claim" --> T["Trial pipeline"]
+    RT -- "chat message on a finished trial" --> C["chat_node"]
+    C --> E([END])
+    T --> E
+
+    classDef a fill:#5B3FD6,stroke:#3B2696,color:#fff
+    classDef b fill:#0B8F82,stroke:#06574F,color:#fff
+    classDef c fill:#1C2444,stroke:#0C1020,color:#fff
+    class RT,T a
+    class C b
+    class S,E c
+```
+
 The graph is wired in [graph.py](graph.py). The judge node uses `defer=True`, so it waits until both lawyers finish. The graph is compiled with `interrupt_before=["judge_node"]`, which creates the human review step. State is saved to SQLite after every node, so a paused trial can be resumed later.
 
 ### Who talks to whom
@@ -347,7 +365,11 @@ In the app you can:
 2. Run the trial and watch live progress as each node finishes.
 3. Read the Prosecutor's and Defender's cases.
 4. Send the case to the Judge for a verdict.
-5. Review the citation check, then ask follow-up questions in the chat box.
+5. Review the citation check, then ask follow-up questions in the chat box. Answers stream in and use only the trial record (claim, labelled evidence, both cases, verdict and citation check).
+
+Conversations are saved automatically. The sidebar has a **New conversation** button and a **Past conversations** list. Click one to resume it with its cases, verdict and full chat, or use the bin icon to delete it. The trial's thread ID is kept in the page URL, so a browser refresh reopens the same conversation.
+
+Chat messages are stored in the LangGraph state and saved by the SQLite checkpointer, the same as the rest of the trial, so no separate database is involved. Chat opens once the judge has ruled.
 
 ### ⌨️ Command line
 
@@ -359,7 +381,7 @@ Takes the top-ranked claim from the bundled USDA document, streams each node as 
 
 ### ⏪ Time travel
 
-Time travel lives in the sidebar of the web app. Every trial shows its thread ID there. Pick any checkpoint from the trial's history and press **Resume from this checkpoint**, and the graph re-runs from that exact point. To reopen an older trial, paste its thread ID into **Load a past trial**. This is useful for seeing how a verdict changes when you rerun from a particular step.
+Time travel lives in the sidebar of the web app. Pick any checkpoint from the current trial's history and press **Resume from this checkpoint**, and the graph re-runs from that exact point. Chat turns are checkpoints too, so rewinding also restores the chat as it was. This is useful for seeing how a verdict changes when you rerun from a particular step.
 
 ```mermaid
 flowchart LR

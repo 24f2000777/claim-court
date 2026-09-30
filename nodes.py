@@ -3,7 +3,7 @@ import re
 import time
 
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
 from prompt import (
@@ -13,7 +13,8 @@ from prompt import (
     prosecutor_prompt,
     query_writer_prompt,
     web_grader_prompt,
-    citation_check_prompt
+    citation_check_prompt,
+    chat_prompt,
 )
 from retrieval.vectorstore import retrieve_top_chunks
 from retrieval.websearch import web_search_tool
@@ -29,6 +30,7 @@ load_dotenv()
 MODEL_NAME = os.getenv("MODEL_NAME")
 SECONDARY_MODEL = "openai/gpt-oss-20b"  # Groq fallback, different daily quota than MODEL_NAME
 MAX_RETRIES = 2
+CHAT_HISTORY_LIMIT = 20  # most recent chat messages sent to the model
 DEBUG = True
 
 # ============================================================
@@ -49,6 +51,9 @@ query_fallback = ChatGroq(model=SECONDARY_MODEL, temperature=0)
 
 grader_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(EvidenceGrades)
 grader_fallback = None
+
+chat_model = ChatGroq(model=MODEL_NAME, temperature=0.3)
+chat_fallback = ChatGroq(model=SECONDARY_MODEL, temperature=0.3)
 
 checker_model = ChatGroq(model=MODEL_NAME, temperature=0).with_structured_output(CitationChecks)
 checker_fallback = None
@@ -473,7 +478,7 @@ def verify_citations(state: CourtState):
             })
         return {"citation_notes": citation_notes}
 
-    # match back by item_number (position in the list), not by label —
+    # match back by item_number (position in the list), not by label:
     # the same label (e.g. W3) can be cited more than once, and matching
     # by label alone would let one citation's result overwrite another's
     checks_by_item = {check.item_number: check for check in response.checks}
@@ -522,6 +527,55 @@ def verify_citations(state: CourtState):
             })
 
     return {"citation_notes": citation_notes}
+
+# ============================================================
+# 9. follow-up chat (runs after the verdict, history is saved in the graph state)
+# ============================================================
+
+
+# a chat message on a finished trial goes to the chat node, anything else starts a trial
+def route_start(state: CourtState):
+    if state.get("messages") and state.get("verdict"):
+        return "chat_node"
+    return "retrieve_docs"
+
+
+def chat_node(state: CourtState):
+    verdict = state["verdict"]
+    if isinstance(verdict, dict):  # depending on the checkpointer version, models can come back as dicts
+        verdict = VerdictClass(**verdict)
+
+    citation_lines = [
+        f"{'OK' if n['verified'] else 'FAIL'} {n['side']} ({n['label']}): {n['reason']}"
+        for n in state.get("citation_notes", [])
+    ]
+    system_prompt = chat_prompt.format(
+        claim=state["claim"],
+        evidence=format_evidence(state),
+        prosecutor_case=state.get("prosecutor_case", ""),
+        defender_case=state.get("defender_case", ""),
+        label=verdict.label,
+        confidence=verdict.confidence,
+        reasoning=verdict.reasoning,
+        citations="\n".join(citation_lines) or "No citations were checked.",
+    )
+
+    history = state["messages"][-CHAT_HISTORY_LIMIT:]
+    try:
+        response = call_with_retry(
+            chat_model,
+            [SystemMessage(content=system_prompt)] + history,
+            fallback_model=chat_fallback,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Chat LLM call failed: {e}") from e
+
+    answer = (response.content or "").strip()
+    if not answer:
+        raise ValueError("Chat model returned an empty answer")
+
+    return {"messages": [AIMessage(content=answer)]}
+
 
 if __name__ == "__main__":
     fake_state = {

@@ -3,11 +3,9 @@ import uuid
 
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessageChunk, HumanMessage
 
-from graph import court_graph
+from graph import checkpointer, court_graph, list_thread_ids
 from ingestion.nodes import (
     cache_path,
     claim_extractor,
@@ -157,6 +155,7 @@ NODE_NAMES = {
     "defender": "defender",
     "judge_node": "judge",
     "verify_citations": "citation check",
+    "chat_node": "chat reply",
 }
 
 
@@ -165,6 +164,9 @@ def describe_checkpoint(snapshot):
     if snapshot.next:
         upcoming = ", ".join(NODE_NAMES.get(n, n) for n in snapshot.next)
         return f"Step {step}: before {upcoming}"
+    chat_count = len(snapshot.values.get("messages", []))
+    if chat_count:
+        return f"Step {step}: chat, {chat_count} messages"
     return f"Step {step}: trial finished"
 
 
@@ -188,21 +190,81 @@ def sync_from_checkpoint(thread_id):
         verdict=verdict,
         citation_notes=values.get("citation_notes", []),
         judge_done=verdict is not None,
-        chat_history=[],
     )
+    st.query_params["thread"] = thread_id  # a page refresh reopens this trial
     return True
 
 
+TRIAL_KEYS = ["thread_id", "trial_started", "judge_done", "claim_text", "prosecutor_case", "defender_case", "verdict", "citation_notes"]
+
+
+def new_conversation():
+    for key in TRIAL_KEYS:
+        st.session_state.pop(key, None)
+    st.query_params.clear()
+
+
+def stream_answer(question, config):
+    """Yields the chat reply token by token from the graph's chat node."""
+    streamed = False
+    for chunk, meta in court_graph.stream(
+        {"messages": [HumanMessage(content=question)]}, config=config, stream_mode="messages"
+    ):
+        if meta.get("langgraph_node") == "chat_node" and isinstance(chunk, AIMessageChunk) and chunk.content:
+            streamed = True
+            yield chunk.content
+    if not streamed:  # the model returned the answer in one piece instead of streaming it
+        messages = court_graph.get_state(config).values.get("messages", [])
+        if messages:
+            yield messages[-1].content
+
+
+# reopen the trial named in the URL after a page refresh
+if st.query_params.get("thread") and not st.session_state.get("thread_id"):
+    if not sync_from_checkpoint(st.query_params["thread"]):
+        st.query_params.clear()
+
+
 with st.sidebar:
+    if st.button("➕ New conversation", use_container_width=True):
+        new_conversation()
+        st.rerun()
+
+    with st.expander("🗂️ Past conversations", expanded=True):
+        shown = 0
+        for tid in list_thread_ids():
+            values = court_graph.get_state({"configurable": {"thread_id": tid}}).values
+            if not values.get("claim"):
+                continue
+            shown += 1
+
+            row_open, row_delete = st.columns([5, 1])
+            is_current = tid == st.session_state.get("thread_id")
+            claim_label = values["claim"] if len(values["claim"]) <= 42 else values["claim"][:40] + "..."
+            if row_open.button(claim_label, key=f"open_{tid}", type="primary" if is_current else "secondary", use_container_width=True):
+                if sync_from_checkpoint(tid):
+                    st.rerun()
+            if row_delete.button("🗑️", key=f"delete_{tid}"):
+                st.session_state["confirm_delete"] = tid
+
+            if st.session_state.get("confirm_delete") == tid:
+                st.warning("Delete this conversation and its chat?")
+                yes_col, no_col = st.columns(2)
+                if yes_col.button("Delete", key=f"yes_{tid}"):
+                    checkpointer.delete_thread(tid)
+                    st.session_state.pop("confirm_delete", None)
+                    if is_current:
+                        new_conversation()
+                    st.rerun()
+                if no_col.button("Cancel", key=f"no_{tid}"):
+                    st.session_state.pop("confirm_delete", None)
+                    st.rerun()
+
+        if not shown:
+            st.caption("No saved conversations yet.")
+
     st.header("⏪ Time travel")
     st.caption("Rewind a trial to any checkpoint and run it forward again.")
-
-    past_id = st.text_input("Load a past trial by thread ID", key="past_thread_id")
-    if st.button("Load trial"):
-        if past_id.strip() and sync_from_checkpoint(past_id.strip()):
-            st.rerun()
-        else:
-            st.error("No saved trial found for that thread ID.")
 
     if st.session_state.get("thread_id"):
         st.caption("Current thread ID (save it to reload this trial later)")
@@ -253,7 +315,7 @@ if run_clicked:
     st.session_state["defender_case"] = ""
     st.session_state["verdict"] = None
     st.session_state["citation_notes"] = []
-    st.session_state["chat_history"] = []
+    st.query_params["thread"] = thread_id
 
     with st.status("Running the trial...", expanded=True) as status:
         for update in court_graph.stream({"claim": claim_text}, config=config, stream_mode="updates"):
@@ -265,6 +327,7 @@ if run_clicked:
                 elif node_name == "defender":
                     st.session_state["defender_case"] = node_output["defender_case"]
         status.update(label="Both sides have presented their case.", state="complete")
+    st.rerun()  # refresh the sidebar so the new trial shows up in the list
 
 # ============================================================
 # DISPLAY: CASES
@@ -290,6 +353,7 @@ if st.session_state.get("trial_started"):
     # ------------------------------------------------------------
     if not st.session_state["judge_done"]:
         send_clicked = st.button("Send to Judge for Verdict")
+        st.caption("Chat opens after the judge rules.")
 
         if send_clicked:
             config = {"configurable": {"thread_id": st.session_state["thread_id"]}}
@@ -341,48 +405,19 @@ if st.session_state.get("trial_started"):
         st.divider()
         st.subheader("💬 Ask about this verdict")
 
-        if "chat_history" not in st.session_state:
-            st.session_state["chat_history"] = []
-
-        chat_model = ChatGroq(model=os.getenv("MODEL_NAME"), temperature=0.3)
-
-        chat_system_prompt = f"""You are answering questions about one fact-checking trial that already ran. Use only the information below. If the person asks something this trial did not cover, say so plainly rather than guessing.
-
-Claim: {st.session_state['claim_text']}
-
-Prosecutor's case:
-{st.session_state['prosecutor_case']}
-
-Defender's case:
-{st.session_state['defender_case']}
-
-Judge's verdict: {verdict.label} (confidence {verdict.confidence:.0%})
-Judge's reasoning: {verdict.reasoning}
-
-Answer in plain, natural sentences. Do not use bold text, headers, or bullet points unless the person specifically asks for a list."""
-
-        for msg in st.session_state["chat_history"]:
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
+        thread_config = {"configurable": {"thread_id": st.session_state["thread_id"]}}
+        for msg in court_graph.get_state(thread_config).values.get("messages", []):
+            with st.chat_message("user" if msg.type == "human" else "assistant"):
+                st.write(msg.content)
 
         user_question = st.chat_input("Ask a question about this trial...")
 
         if user_question:
-            st.session_state["chat_history"].append({"role": "user", "content": user_question})
             with st.chat_message("user"):
                 st.write(user_question)
 
-            messages = [SystemMessage(content=chat_system_prompt)]
-            for msg in st.session_state["chat_history"]:
-                if msg["role"] == "user":
-                    messages.append(HumanMessage(content=msg["content"]))
-                else:
-                    messages.append(AIMessage(content=msg["content"]))
-
             with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    response = chat_model.invoke(messages)
-                    answer = response.content
-                    st.write(answer)
-
-            st.session_state["chat_history"].append({"role": "assistant", "content": answer})
+                try:
+                    st.write_stream(stream_answer(user_question, thread_config))
+                except Exception as e:
+                    st.error(f"Could not get an answer, please ask again: {e}")

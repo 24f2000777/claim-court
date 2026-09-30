@@ -1,4 +1,5 @@
-from typing import TypedDict, Literal
+from typing import Annotated, TypedDict, Literal
+from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 
@@ -49,6 +50,7 @@ class CourtState(TypedDict):
     web_evidence: list[dict]
     evidence_ok: bool
     citation_notes: list[dict]
+    messages: Annotated[list, add_messages]  # follow-up chat, saved with the trial by the checkpointer
 
 
 
@@ -58,7 +60,7 @@ class ItemGrade(BaseModel):
     reasoning: str = Field(description="One short sentence explaining why this grade was given")
 
 class EvidenceGrades(BaseModel):
-    grades: list[ItemGrade] = Field(description="Exactly one ItemGrade per evidence item, in any order — matched back by item_number")
+    grades: list[ItemGrade] = Field(description="Exactly one ItemGrade per evidence item, in any order, matched back by item_number")
 
 
 class CitationCheck(BaseModel):
@@ -68,4 +70,4 @@ class CitationCheck(BaseModel):
     reason: str = Field(description="One short sentence comparing what was claimed to what the evidence actually says")
 
 class CitationChecks(BaseModel):
-    checks: list[CitationCheck] = Field(description="Exactly one CitationCheck per citation, in any order — matched back by item_number")
+    checks: list[CitationCheck] = Field(description="Exactly one CitationCheck per citation, in any order, matched back by item_number")

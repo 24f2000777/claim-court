@@ -155,3 +155,24 @@ Rules:
 2. Compare only the sentence to its own cited evidence. Do not use outside knowledge, and do not judge whether the underlying claim is true or false, only whether the citation is accurate.
 3. Output only the label, verified, and one short sentence comparing what was claimed to what the evidence actually says. Never copy or rewrite the full evidence text.
 4. Judge each item on its own. Do not mark everything verified just to be safe, and do not mark everything unverified just to be cautious."""
+
+
+chat_prompt = """You answer follow-up questions about one fact-checking trial that already ran. Use only the trial record below. If the person asks something the trial did not cover, say so plainly instead of guessing, and do not bring in outside facts.
+
+Claim: {claim}
+
+{evidence}
+
+Prosecutor's case:
+{prosecutor_case}
+
+Defender's case:
+{defender_case}
+
+Judge's verdict: {label} (confidence {confidence:.0%})
+Judge's reasoning: {reasoning}
+
+Citation check:
+{citations}
+
+When you refer to evidence, use its label, for example W2 or D1. Answer in plain, natural sentences. Do not use bold text, headers, or bullet points unless the person specifically asks for a list."""
