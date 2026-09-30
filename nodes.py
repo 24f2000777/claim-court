@@ -66,27 +66,60 @@ checker_fallback = None
 # ============================================================
 
 
+class RateLimitError(RuntimeError):
+    """The model kept returning 429 after every retry. wait_hint is Groq's own "try again in ..." text."""
+
+    def __init__(self, message, wait_hint=None, daily=False):
+        super().__init__(message)
+        self.wait_hint = wait_hint
+        self.daily = daily
+
+
+def is_rate_limit(error):
+    return "429" in str(error) or "rate_limit" in str(error).lower()
+
+
+# daily limits (tokens or requests per day) will not clear by waiting a few seconds
+def is_daily_limit(error):
+    text = str(error).lower()
+    return "per day" in text or "(tpd)" in text or "(rpd)" in text
+
+
+def wait_hint(error):
+    match = re.search(r"try again in ([0-9hms.]+)", str(error))
+    return match.group(1).rstrip(".") if match else None
+
+
 # calls the model, retries on rate limit, and falls back to a secondary model if given
 def call_with_retry(model, messages, fallback_model=None):
     waits = [2, 5, 10, 20]
-    for attempt in range(len(waits)):
+    last_error = None
+    for wait in waits:
         try:
             return model.invoke(messages)
         except Exception as e:
-            if "429" in str(e) or "rate_limit" in str(e).lower():
-                print(f"Rate limit hit, waiting {waits[attempt]}s")
-                time.sleep(waits[attempt])
-                continue
-            raise
+            if not is_rate_limit(e):
+                raise
+            last_error = e
+            if is_daily_limit(e):
+                break
+            print(f"Rate limit hit, waiting {wait}s")
+            time.sleep(wait)
 
     if fallback_model is not None:
         print("Primary model exhausted, falling back to secondary model")
         try:
             return fallback_model.invoke(messages)
         except Exception as e:
-            raise RuntimeError(f"Both primary and fallback model failed: {e}") from e
+            if not is_rate_limit(e):
+                raise RuntimeError(f"Both primary and fallback model failed: {e}") from e
+            last_error = e
 
-    raise RuntimeError("Rate limit: still failing after all retries")
+    raise RateLimitError(
+        "Rate limit: still failing after all retries",
+        wait_hint=wait_hint(last_error),
+        daily=is_daily_limit(last_error),
+    ) from last_error
 
 
 # neutral search query without the claim's figures, optionally leaning "for" or "against"

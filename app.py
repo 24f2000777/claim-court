@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 
@@ -15,11 +16,12 @@ from ingestion.nodes import (
     ranker,
     select_top_claims,
 )
-from nodes import MAX_REVIEW_ROUNDS
+from nodes import MAX_REVIEW_ROUNDS, RateLimitError, is_daily_limit, is_rate_limit, wait_hint
 from retrieval.vectorstore import set_active_document
 from state import VerdictClass
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # PAGE SETUP
@@ -72,6 +74,39 @@ st.title("⚖️ Claim Court")
 st.markdown('<p class="subtitle">An adversarial multi-agent fact-checking trial</p>', unsafe_allow_html=True)
 
 # ============================================================
+# BACKEND ERRORS: turn failures into plain messages, keep the trial resumable
+# ============================================================
+
+
+def describe_error(error):
+    """Turns a backend failure into (kind, message). Rate limits get a plain wait message."""
+    chain, current = [], error
+    while current is not None and all(current is not seen for seen in chain):
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+
+    limited = next((e for e in chain if isinstance(e, RateLimitError) or is_rate_limit(e)), None)
+    if limited is None:
+        logger.error("Backend failure", exc_info=error)  # full details stay in the terminal
+        return "error", "Something went wrong while running the court. Your progress is saved, so try again. If it keeps failing, check the terminal for details."
+
+    hint = getattr(limited, "wait_hint", None) or wait_hint(limited)
+    if getattr(limited, "daily", False) or is_daily_limit(limited):
+        when = f" It should reset in about {hint}." if hint else ""
+        return "rate", f"The AI service has used up its free daily limit.{when} Your progress is saved, so press Try again once it resets."
+    return "rate", f"The AI service is busy (free-tier rate limit). Please wait {'about ' + hint if hint else 'a minute'} and press Try again. Your progress is saved."
+
+
+def report_error(error):
+    kind, text = describe_error(error)
+    (st.warning if kind == "rate" else st.error)(text)
+
+
+def record_error(error):
+    st.session_state["backend_error"] = describe_error(error)
+
+
+# ============================================================
 # STEP 1: DOCUMENT SOURCE: upload a PDF, or use the bundled default
 # ============================================================
 
@@ -109,7 +144,7 @@ if uploaded_file is not None and st.session_state.get("last_uploaded_name") != u
             status.update(label="Document processed!", state="complete")
         except Exception as e:
             status.update(label="Processing failed", state="error")
-            st.error(f"Could not process this PDF: {e}")
+            report_error(e)
 
 # ============================================================
 # STEP 2: CLAIM INPUT: pick an extracted claim, or type your own
@@ -182,6 +217,7 @@ def sync_from_checkpoint(thread_id):
     if isinstance(verdict, dict):  # depending on the checkpointer version, models can come back as dicts
         verdict = VerdictClass(**verdict)
 
+    st.session_state.pop("backend_error", None)
     st.session_state.update(
         thread_id=thread_id,
         trial_started=True,
@@ -198,7 +234,7 @@ def sync_from_checkpoint(thread_id):
     return True
 
 
-TRIAL_KEYS = ["thread_id", "trial_started", "judge_done", "claim_text", "prosecutor_case", "defender_case", "verdict", "citation_notes", "review_status", "review_rounds"]
+TRIAL_KEYS = ["thread_id", "trial_started", "judge_done", "claim_text", "prosecutor_case", "defender_case", "verdict", "citation_notes", "review_status", "review_rounds", "backend_error"]
 
 
 def new_conversation():
@@ -230,6 +266,41 @@ def send_back_to_lawyers(thread_id, note):
                 if node_name in STAGE_LABELS:
                     status.write(STAGE_LABELS[node_name])
         status.update(label="Both sides have revised their case.", state="complete")
+
+
+def resume_trial():
+    """Continues the trial from its last checkpoint after a failure, without repeating finished steps."""
+    thread_id = st.session_state["thread_id"]
+    config = {"configurable": {"thread_id": thread_id}}
+    with st.status("Trying again...", expanded=True) as status:
+        try:
+            for update in court_graph.stream(None, config=config, stream_mode="updates"):
+                for node_name in update:
+                    if node_name in STAGE_LABELS:
+                        status.write(STAGE_LABELS[node_name])
+                    elif node_name == "judge_node":
+                        status.write("⚖️ Judge is deliberating...")
+                    elif node_name == "verify_citations":
+                        status.write("📋 Verifying citations...")
+                    elif node_name == "chat_node":
+                        status.write("💬 Writing an answer...")
+            status.update(label="Done.", state="complete")
+        except Exception as e:
+            status.update(label="Still failing", state="error")
+            record_error(e)
+            return
+    sync_from_checkpoint(thread_id)
+    st.rerun()
+
+
+def show_backend_error():
+    """Shows the last backend failure with a button that resumes the trial."""
+    if not st.session_state.get("backend_error"):
+        return
+    kind, text = st.session_state["backend_error"]
+    (st.warning if kind == "rate" else st.error)(text)
+    if st.button("Try again", key="retry_backend"):
+        resume_trial()
 
 
 def stream_answer(question, config):
@@ -327,7 +398,7 @@ with st.sidebar:
                         replayed = True
                     except Exception as e:
                         status.update(label="Replay failed", state="error")
-                        st.error(f"Could not replay from this checkpoint: {e}")
+                        report_error(e)
 
                 if replayed:
                     sync_from_checkpoint(st.session_state["thread_id"])
@@ -347,19 +418,27 @@ if run_clicked:
     st.session_state["citation_notes"] = []
     st.session_state["review_status"] = "pending"
     st.session_state["review_rounds"] = 0
+    st.session_state.pop("backend_error", None)
     st.query_params["thread"] = thread_id
 
+    trial_failed = False
     with st.status("Running the trial...", expanded=True) as status:
-        for update in court_graph.stream({"claim": claim_text}, config=config, stream_mode="updates"):
-            for node_name, node_output in update.items():
-                if node_name in STAGE_LABELS:
-                    status.write(STAGE_LABELS[node_name])
-                if node_name == "prosecutor":
-                    st.session_state["prosecutor_case"] = node_output["prosecutor_case"]
-                elif node_name == "defender":
-                    st.session_state["defender_case"] = node_output["defender_case"]
-        status.update(label="Both sides have presented their case.", state="complete")
-    st.rerun()  # refresh the sidebar so the new trial shows up in the list
+        try:
+            for update in court_graph.stream({"claim": claim_text}, config=config, stream_mode="updates"):
+                for node_name, node_output in update.items():
+                    if node_name in STAGE_LABELS:
+                        status.write(STAGE_LABELS[node_name])
+                    if node_name == "prosecutor":
+                        st.session_state["prosecutor_case"] = node_output["prosecutor_case"]
+                    elif node_name == "defender":
+                        st.session_state["defender_case"] = node_output["defender_case"]
+            status.update(label="Both sides have presented their case.", state="complete")
+        except Exception as e:
+            status.update(label="The trial stopped early", state="error")
+            record_error(e)
+            trial_failed = True
+    if not trial_failed:
+        st.rerun()  # refresh the sidebar so the new trial shows up in the list
 
 # ============================================================
 # DISPLAY: CASES
@@ -411,7 +490,7 @@ if st.session_state.get("trial_started"):
                             try:
                                 send_back_to_lawyers(thread_id, feedback.strip())
                             except Exception as e:
-                                st.error(f"Could not send the cases back: {e}")
+                                record_error(e)
                             else:
                                 sync_from_checkpoint(thread_id)
                                 st.rerun()
@@ -435,20 +514,28 @@ if st.session_state.get("trial_started"):
             if send_clicked:
                 config = {"configurable": {"thread_id": thread_id}}
 
+                judge_failed = False
                 with st.status("Finalizing verdict...", expanded=True) as status:
-                    for update in court_graph.stream(None, config=config, stream_mode="updates"):
-                        for node_name, node_output in update.items():
-                            if node_name == "judge_node":
-                                status.write("⚖️ Judge is deliberating...")
-                                st.session_state["verdict"] = node_output["verdict"]
-                            elif node_name == "verify_citations":
-                                status.write("📋 Verifying citations...")
-                                st.session_state["citation_notes"] = node_output.get("citation_notes", [])
-                    status.update(label="Verdict reached!", state="complete")
+                    try:
+                        for update in court_graph.stream(None, config=config, stream_mode="updates"):
+                            for node_name, node_output in update.items():
+                                if node_name == "judge_node":
+                                    status.write("⚖️ Judge is deliberating...")
+                                    st.session_state["verdict"] = node_output["verdict"]
+                                elif node_name == "verify_citations":
+                                    status.write("📋 Verifying citations...")
+                                    st.session_state["citation_notes"] = node_output.get("citation_notes", [])
+                        status.update(label="Verdict reached!", state="complete")
+                    except Exception as e:
+                        status.update(label="The judge could not finish", state="error")
+                        record_error(e)
+                        judge_failed = True
 
-                st.session_state["judge_done"] = True
-                st.rerun()
+                if not judge_failed:
+                    st.session_state["judge_done"] = True
+                    st.rerun()
 
+        show_backend_error()
         st.caption("Chat opens after the judge rules.")
 
     # ------------------------------------------------------------
@@ -483,6 +570,7 @@ if st.session_state.get("trial_started"):
         # ============================================================
         st.divider()
         st.subheader("💬 Ask about this verdict")
+        show_backend_error()
 
         thread_config = {"configurable": {"thread_id": st.session_state["thread_id"]}}
         for msg in court_graph.get_state(thread_config).values.get("messages", []):
@@ -495,8 +583,12 @@ if st.session_state.get("trial_started"):
             with st.chat_message("user"):
                 st.write(user_question)
 
+            chat_failed = False
             with st.chat_message("assistant"):
                 try:
                     st.write_stream(stream_answer(user_question, thread_config))
                 except Exception as e:
-                    st.error(f"Could not get an answer, please ask again: {e}")
+                    record_error(e)
+                    chat_failed = True
+            if chat_failed:
+                st.rerun()  # shows the message and the Try again button above the chat

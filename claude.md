@@ -45,6 +45,8 @@ At the pause before the judge the human can approve, send the cases back with fe
 - Prosecutor/Defender prompts: 3-5 bullets, under 200 words, no bold text, no headers, no em-dashes, natural sentence-per-bullet, each ending with the evidence label in brackets.
 - Structured-output roles (Judge, graders, citation checker) do NOT fall back to the smaller model — unreliable at tool-call-style output under load. They retry on the primary model only and fail gracefully (skip the claim) if quota is exhausted.
 
+- Rate limits: `call_with_retry` raises `RateLimitError` (with Groq's wait hint and a daily flag) after retries. `app.py` turns any backend failure into a plain message plus a Try again button that resumes from the last checkpoint with `stream(None)`.
+
 ## Constraints (non-negotiable)
 - Must stay 100% free — no Groq paid tier, no separate Groq accounts to bypass rate limits.
 - No placeholder code, proper error handling, brief comments for non-obvious logic only.

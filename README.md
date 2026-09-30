@@ -261,7 +261,7 @@ A conversation is a LangGraph thread. The sidebar lists threads straight from th
 <details>
 <summary><b>⏱️ Rate limits are handled, not ignored</b></summary>
 
-Model calls retry with backoff (2, 5, 10 and 20 seconds) when Groq returns a rate limit error.
+Model calls retry with backoff (2, 5, 10 and 20 seconds) when Groq returns a rate limit error. A daily limit skips the waiting, since seconds will not clear it. If retries run out, the backend raises a `RateLimitError` that carries Groq's own "try again in ..." hint. The web app catches it and shows a plain message, such as "The AI service is busy (free-tier rate limit). Please wait about 8.5s and press Try again", or a daily-limit version that says roughly when it resets. Progress is saved at the last checkpoint, and **Try again** resumes from there without repeating finished steps. Other failures show a short generic message, and the full traceback goes to the terminal instead of the page.
 </details>
 
 ### Model routing
@@ -486,7 +486,8 @@ The harness is resumable. If the Groq daily quota runs out partway through, run 
 | --- | --- | --- |
 | `No module named 'torchvision'` in the Streamlit log | Streamlit's file watcher introspects `transformers` submodules | Harmless, silenced by `fileWatcherType = "none"` in `.streamlit/config.toml` |
 | `Deserializing unregistered type state.VerdictClass` when loading a past trial | LangGraph checkpointer forward-compatibility notice | Safe to ignore |
-| A chat question shows an error and no answer | Groq rate limit or a model failure during the chat turn | The question stays in the history. Ask again |
+| A yellow "AI service is busy" or "free daily limit" message | Groq free-tier limit | Wait the time shown, then press **Try again**. Your progress is saved |
+| A red "Something went wrong" message | Any other backend failure | Press **Try again**. Details are printed in the terminal |
 | The chat box is missing | Chat opens only after the judge rules, and a declined trial has no verdict | Send the case to the Judge first, or press Reopen on a declined trial |
 | Rate limit messages or skipped claims | Groq free-tier daily quota | Wait and rerun, the eval harness resumes automatically |
 
