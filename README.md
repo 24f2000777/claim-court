@@ -259,12 +259,11 @@ Everything runs on free tiers. No paid Groq plan is involved or needed.
 ```
 claim-court/
 ├── main.py             CLI entry point, runs one claim through the trial graph
-├── app.py              Streamlit UI: PDF upload, claim extraction, trial, chat
+├── app.py              Streamlit UI: PDF upload, claim extraction, trial, chat, time travel
 ├── state.py            CourtState and the Pydantic schemas
 ├── prompt.py           Every prompt in one place
 ├── nodes.py            Graph nodes: retrieval, grading, lawyers, judge, audit
 ├── graph.py            Graph wiring, SQLite checkpointer, human review interrupt
-├── time_travel.py      Inspect and fork a trial from any past checkpoint
 ├── ingestion/          PDF loading, chunking, claim extraction, dedup, ranking
 ├── retrieval/
 │   ├── vectorstore.py  Chroma setup, retrieval, uploaded document swapping
@@ -360,11 +359,7 @@ Takes the top-ranked claim from the bundled USDA document, streams each node as 
 
 ### ⏪ Time travel
 
-```bash
-python3 time_travel.py
-```
-
-Enter a thread ID from an earlier run and pick any checkpoint from its history. The graph resumes from that exact point, which is useful for seeing how a verdict changes when you rerun from a particular step.
+Time travel lives in the sidebar of the web app. Every trial shows its thread ID there. Pick any checkpoint from the trial's history and press **Resume from this checkpoint**, and the graph re-runs from that exact point. To reopen an older trial, paste its thread ID into **Load a past trial**. This is useful for seeing how a verdict changes when you rerun from a particular step.
 
 ```mermaid
 flowchart LR
@@ -423,7 +418,7 @@ The harness is resumable. If the Groq daily quota runs out partway through, run 
 | Symptom | Cause | Action |
 | --- | --- | --- |
 | `No module named 'torchvision'` in the Streamlit log | Streamlit's file watcher introspects `transformers` submodules | Harmless, silenced by `fileWatcherType = "none"` in `.streamlit/config.toml` |
-| `Deserializing unregistered type state.VerdictClass` in time travel | LangGraph checkpointer forward-compatibility notice | Safe to ignore |
+| `Deserializing unregistered type state.VerdictClass` when loading a past trial | LangGraph checkpointer forward-compatibility notice | Safe to ignore |
 | Rate limit messages or skipped claims | Groq free-tier daily quota | Wait and rerun, the eval harness resumes automatically |
 
 ---

@@ -14,12 +14,11 @@ Adversarial multi-agent fact-checking system built with LangGraph, RAG, and Groq
 ## Project structure
 claim-court/
 ├── main.py # CLI entry point, runs a single claim through the trial graph
-├── app.py # Streamlit web UI: PDF upload, claim extraction, trial, chat
+├── app.py # Streamlit web UI: PDF upload, claim extraction, trial, chat, sidebar time travel (get_state_history)
 ├── state.py # CourtState, VerdictClass, EvidenceGrades, CitationChecks
 ├── prompt.py # all prompts: prosecutor, defender, judge, graders, query writer, citation checker
 ├── nodes.py # graph nodes: retrieval, grading, lawyers, judge, citation verification
 ├── graph.py # StateGraph wiring, SQLite checkpointer, interrupt_before=["judge_node"]
-├── time_travel.py # inspect/fork from any past checkpoint via get_state_history
 ├── ingestion/
 │ ├── nodes.py # PDF loading, chunking, claim extraction, dedup, ranking
 │ ├── state.py
@@ -62,7 +61,7 @@ python3 -m eval.run_eval            # resumable 12-claim eval harness
 ## Known gotchas
 - `streamlit` CLI command can resolve to the wrong (non-venv) Python — always use `python3 -m streamlit run app.py`.
 - Streamlit's file watcher throws harmless `ModuleNotFoundError: No module named 'torchvision'` while introspecting `transformers` submodules (pulled in via `sentence-transformers`) — silenced via `.streamlit/config.toml` (`fileWatcherType = "none"`). Non-fatal, does not affect app function.
-- `Deserializing unregistered type state.VerdictClass from checkpoint` warning in `time_travel.py` is a harmless LangGraph checkpointer forward-compat warning — safe to ignore.
+- `Deserializing unregistered type state.VerdictClass from checkpoint` warning when loading a past trial in `app.py` is a harmless LangGraph checkpointer forward-compat warning — safe to ignore.
 
 ## Status
 Eval: 12/12 (100%) on the eval harness (general knowledge + USDA report claims), reproduced across multiple runs — note this predates the batch-grading/citation-matching/prompt fixes made most recently, so a re-run to reconfirm is a good idea. Phase 8 (persistence, human-in-the-loop, time-travel) and the Streamlit UI (PDF upload with auto claim extraction, manual claim fallback, live progress via `st.status`, post-verdict chat) are both built and working end-to-end.

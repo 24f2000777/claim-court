@@ -18,6 +18,7 @@ from ingestion.nodes import (
     select_top_claims,
 )
 from retrieval.vectorstore import set_active_document
+from state import VerdictClass
 
 load_dotenv()
 
@@ -72,7 +73,7 @@ st.title("⚖️ Claim Court")
 st.markdown('<p class="subtitle">An adversarial multi-agent fact-checking trial</p>', unsafe_allow_html=True)
 
 # ============================================================
-# STEP 1: DOCUMENT SOURCE — upload a PDF, or use the bundled default
+# STEP 1: DOCUMENT SOURCE: upload a PDF, or use the bundled default
 # ============================================================
 
 uploaded_file = st.file_uploader("Upload a PDF to fact-check (optional)", type="pdf")
@@ -112,7 +113,7 @@ if uploaded_file is not None and st.session_state.get("last_uploaded_name") != u
             st.error(f"Could not process this PDF: {e}")
 
 # ============================================================
-# STEP 2: CLAIM INPUT — pick an extracted claim, or type your own
+# STEP 2: CLAIM INPUT: pick an extracted claim, or type your own
 # ============================================================
 
 if st.session_state.get("uploaded_ranked_claims"):
@@ -136,10 +137,109 @@ STAGE_LABELS = {
     "grade_doc": "🔍 Grading document evidence for relevance...",
     "web_search": "🌐 Searching the web for independent sources...",
     "grade_web": "🔍 Grading web evidence for relevance...",
-    "rewrite": "✏️ Evidence was weak — refining the search query...",
+    "rewrite": "✏️ Evidence was weak, refining the search query...",
     "prosecutor": "⚔️ Prosecutor is building their case...",
     "defender": "🛡️ Defender is building their case...",
 }
+
+# ============================================================
+# TIME TRAVEL (sidebar): rewind a trial to any checkpoint and run it forward again
+# ============================================================
+
+NODE_NAMES = {
+    "__start__": "trial start",
+    "retrieve_docs": "document retrieval",
+    "grade_doc": "document grading",
+    "web_search": "web search",
+    "grade_web": "web grading",
+    "rewrite": "query rewrite",
+    "prosecutor": "prosecutor",
+    "defender": "defender",
+    "judge_node": "judge",
+    "verify_citations": "citation check",
+}
+
+
+def describe_checkpoint(snapshot):
+    step = snapshot.metadata.get("step", "?")
+    if snapshot.next:
+        upcoming = ", ".join(NODE_NAMES.get(n, n) for n in snapshot.next)
+        return f"Step {step}: before {upcoming}"
+    return f"Step {step}: trial finished"
+
+
+def sync_from_checkpoint(thread_id):
+    """Loads a thread's latest checkpoint into session state so the main view matches it."""
+    snapshot = court_graph.get_state({"configurable": {"thread_id": thread_id}})
+    values = snapshot.values
+    if not values:
+        return False
+
+    verdict = values.get("verdict")
+    if isinstance(verdict, dict):  # depending on the checkpointer version, models can come back as dicts
+        verdict = VerdictClass(**verdict)
+
+    st.session_state.update(
+        thread_id=thread_id,
+        trial_started=True,
+        claim_text=values.get("claim", ""),
+        prosecutor_case=values.get("prosecutor_case", ""),
+        defender_case=values.get("defender_case", ""),
+        verdict=verdict,
+        citation_notes=values.get("citation_notes", []),
+        judge_done=verdict is not None,
+        chat_history=[],
+    )
+    return True
+
+
+with st.sidebar:
+    st.header("⏪ Time travel")
+    st.caption("Rewind a trial to any checkpoint and run it forward again.")
+
+    past_id = st.text_input("Load a past trial by thread ID", key="past_thread_id")
+    if st.button("Load trial"):
+        if past_id.strip() and sync_from_checkpoint(past_id.strip()):
+            st.rerun()
+        else:
+            st.error("No saved trial found for that thread ID.")
+
+    if st.session_state.get("thread_id"):
+        st.caption("Current thread ID (save it to reload this trial later)")
+        st.code(st.session_state["thread_id"], language=None)
+
+        thread_config = {"configurable": {"thread_id": st.session_state["thread_id"]}}
+        history = list(reversed(list(court_graph.get_state_history(thread_config))))  # oldest first
+
+        if history:
+            choice = st.selectbox(
+                "Checkpoint",
+                range(len(history)),
+                format_func=lambda i: describe_checkpoint(history[i]),
+                key="checkpoint_choice",
+            )
+
+            if st.button("Resume from this checkpoint"):
+                replayed = False
+                with st.status("Re-running from checkpoint...", expanded=True) as status:
+                    try:
+                        for update in court_graph.stream(None, config=history[choice].config, stream_mode="updates"):
+                            for node_name in update:
+                                if node_name in STAGE_LABELS:
+                                    status.write(STAGE_LABELS[node_name])
+                                elif node_name == "judge_node":
+                                    status.write("⚖️ Judge is deliberating...")
+                                elif node_name == "verify_citations":
+                                    status.write("📋 Verifying citations...")
+                        status.update(label="Replay complete.", state="complete")
+                        replayed = True
+                    except Exception as e:
+                        status.update(label="Replay failed", state="error")
+                        st.error(f"Could not replay from this checkpoint: {e}")
+
+                if replayed:
+                    sync_from_checkpoint(st.session_state["thread_id"])
+                    st.rerun()
 
 if run_clicked:
     thread_id = str(uuid.uuid4())
@@ -231,7 +331,7 @@ if st.session_state.get("trial_started"):
             label = "OK" if note["verified"] else "FAIL"
             st.markdown(
                 f'<div class="citation-line"><span class="{css_class}">{label}</span> '
-                f'— <b>{note["side"]}</b> ({note["label"]}): {note["reason"]}</div>',
+                f'<b>{note["side"]}</b> ({note["label"]}): {note["reason"]}</div>',
                 unsafe_allow_html=True,
             )
 
