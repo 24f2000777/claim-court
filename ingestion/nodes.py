@@ -15,38 +15,38 @@ load_dotenv()
 
 
 # ============================================================
-# LOAD + CHUNK THE SOURCE PDF
+# LOAD + CHUNK A SOURCE PDF
 # ============================================================
 
+def load_and_chunk_pdf(pdf_path):
+    """Loads a PDF, sanity-checks it has extractable text, and splits it into page-tagged chunks."""
+    loader = PyPDFLoader(pdf_path)
+    documents = loader.load()
+
+    all_pages_text = [document.page_content for document in documents]
+    cleaned_text = "".join(all_pages_text).strip()
+    if len(cleaned_text) < 50:
+        raise ValueError("Not enough text in PDF")
+
+    # PyPDFLoader pages are 0-indexed; bump to 1-indexed for human-readable citations later
+    pages = []
+    for document in documents:
+        pages.append({"page": document.metadata["page"] + 1, "text": document.page_content})
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+
+    # split page by page (not the whole document at once) so every chunk keeps its page number
+    chunks = []
+    for page in pages:
+        page_chunk = splitter.split_text(page["text"])
+        for chunk in page_chunk:
+            chunks.append({"page": page["page"], "text": chunk})
+
+    return chunks
+
+
 pdf_path = "data/usda_qcommerce.pdf"
-
-loader = PyPDFLoader(pdf_path)
-documents = loader.load()
-
-# sanity check: make sure the PDF actually has extractable text before we bother chunking it
-all_pages_text = []
-for document in documents:
-    all_pages_text.append(document.page_content)
-
-total_text = "".join(all_pages_text)
-cleaned_text = total_text.strip()
-if len(cleaned_text) < 50:
-    raise ValueError("Not enough text in PDF")
-
-# PyPDFLoader pages are 0-indexed; bump to 1-indexed for human-readable citations later
-pages = []
-for document in documents:
-    pages.append({"page": document.metadata["page"] + 1, "text": document.page_content})
-
-splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
-
-# split page by page (not the whole document at once) so every chunk keeps its page number
-chunks = []
-for page in pages:
-    page_chunk = splitter.split_text(page["text"])
-    for chunk in page_chunk:
-        chunks.append({"page": page["page"], "text": chunk})
-
+chunks = load_and_chunk_pdf(pdf_path)  # default bundled document, loaded at import time
 
 # ============================================================
 # CLAIM EXTRACTION (chunk -> list[Claim])

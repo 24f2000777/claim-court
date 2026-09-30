@@ -188,42 +188,36 @@ def retrieve_docs(state: CourtState):
 
 
 # drops irrelevant chunks, keeps everything if grading fails
-def grade_doc(state: CourtState):
-    evidence = state.get("doc_evidence", [])
-    if not evidence:
+def grade_doc(state: CourtState) -> dict:
+    chunks = state["doc_evidence"]
+    if not chunks:
         return {"doc_evidence": []}
 
+    items_text = number_items(chunks)  # "1. <chunk text>\n2. <chunk text>..."
+    prompt = doc_grader_prompt.format(claim=state["claim"], count=len(chunks), items=items_text)
+
     try:
-        response = call_with_retry(
-            grader_model,
-            [
-                SystemMessage(content=doc_grader_prompt),
-                HumanMessage(
-                    content=f"Claim: {state['claim']}\n\nChunks:\n{number_items(evidence)}"
-                ),
-            ],
-            fallback_model=grader_fallback,
-        )
+        response = call_with_retry(grader_model, prompt, fallback_model=grader_fallback)
     except Exception as e:
-        print(f"Doc grading failed, keeping all chunks: {e}")
-        return {"doc_evidence": evidence}
-
-    if response is None:
-        return {"doc_evidence": evidence}
-
-    irrelevant = set()
-    for g in response.grades:
         if DEBUG:
-            print("doc", g.item_number, g.grade, "-", g.reason)
-        if g.grade == "irrelevant":
-            irrelevant.add(g.item_number)
+            print(f"Doc grading failed, keeping all chunks: {e}")
+        return {"doc_evidence": chunks}
 
+    # Map grades back by item_number; if the model mis-numbers or drops an item,
+    # default that chunk to "ambiguous" rather than silently losing it.
+    grade_map = {g.item_number: g for g in response.grades}
     kept = []
-    for i, item in enumerate(evidence):
-        if (i + 1) not in irrelevant:
-            kept.append(item)
+    for i, chunk in enumerate(chunks, start=1):
+        g = grade_map.get(i)
+        grade = g.grade if g else "ambiguous"
+        reasoning = g.reasoning if g else "no grade returned, defaulted to ambiguous"
+        if DEBUG:
+            print(f"doc {i} {grade} - {reasoning}")
+        if grade in ("relevant", "ambiguous"):
+            kept.append(chunk)
 
     return {"doc_evidence": kept}
+
 
 
 # runs one search per stance, merges results and drops duplicate urls
@@ -256,45 +250,34 @@ def web_search(state: CourtState):
     return {"search_query": " | ".join(queries), "web_evidence": items}
 
 
-# drops irrelevant results (including the claim's own source); evidence_ok needs 1 relevant
-def grade_web(state: CourtState):
-    evidence = state.get("web_evidence", [])
-    if not evidence:
+def grade_web(state: CourtState) -> dict:
+    results = state["web_evidence"]
+    if not results:
         return {"web_evidence": [], "evidence_ok": False}
 
+    items_text = format_web_items(results)
+    prompt = web_grader_prompt.format(claim=state["claim"], count=len(results), items=items_text)
+
     try:
-        response = call_with_retry(
-            grader_model,
-            [
-                SystemMessage(content=web_grader_prompt),
-                HumanMessage(
-                    content=f"Claim: {state['claim']}\n\nResults:\n{number_items(evidence)}"
-                ),
-            ],
-            fallback_model=grader_fallback,
-        )
+        response = call_with_retry(grader_model, prompt, fallback_model=grader_fallback)
     except Exception as e:
-        print(f"Web grading failed: {e}")
-        return {"web_evidence": evidence, "evidence_ok": False}
-
-    if response is None:
-        return {"web_evidence": evidence, "evidence_ok": False}
-
-    grade_by_number = {}
-    for g in response.grades:
         if DEBUG:
-            print("web", g.item_number, g.grade, "-", g.reason)
-        grade_by_number[g.item_number] = g.grade
+            print(f"Web grading failed, keeping all results: {e}")
+        return {"web_evidence": results, "evidence_ok": True}
 
+    grade_map = {g.item_number: g for g in response.grades}
     kept = []
     relevant_count = 0
-    for i, item in enumerate(evidence):
-        grade = grade_by_number.get(i + 1, "ambiguous")  # ungraded: keep, don't count
-        if grade == "irrelevant":
-            continue
+    for i, result in enumerate(results, start=1):
+        g = grade_map.get(i)
+        grade = g.grade if g else "ambiguous"
+        reasoning = g.reasoning if g else "no grade returned, defaulted to ambiguous"
+        if DEBUG:
+            print(f"web {i} {grade} - {reasoning}")
         if grade == "relevant":
             relevant_count += 1
-        kept.append(item)
+        if grade in ("relevant", "ambiguous"):
+            kept.append(result)
 
     return {"web_evidence": kept, "evidence_ok": relevant_count >= 1}
 
@@ -320,7 +303,16 @@ def route_after_web_grade(state: CourtState):
         return ["prosecutor", "defender"]
     return "rewrite"
 
-
+def format_web_items(results):
+    """Format Tavily web results into a numbered text block for the grader prompt."""
+    lines = []
+    for i, r in enumerate(results, start=1):
+        if isinstance(r, dict):
+            text = r.get("content") or r.get("snippet") or r.get("title") or str(r)
+        else:
+            text = str(r)
+        lines.append(f"{i}. {text}")
+    return "\n".join(lines)
 # ============================================================
 # 5. prosecutor
 # ============================================================
@@ -454,9 +446,9 @@ def verify_citations(state: CourtState):
         return {"citation_notes": citation_notes}
 
     lines = []
-    for i, c in enumerate(to_check):
+    for i, c in enumerate(to_check, start=1):
         lines.append(
-            f"{i+1}. Label: {c['label']} | Claimed: {c['claimed']} | Evidence: {c['evidence_text']}"
+            f"{i}. Label: {c['label']} | Claimed: {c['claimed']} | Evidence: {c['evidence_text']}"
         )
     text = "\n".join(lines)
 
@@ -471,7 +463,6 @@ def verify_citations(state: CourtState):
         )
     except Exception as e:
         print(f"Citation check failed: {e}")
-        # can't verify, so mark these as unverified rather than silently dropping them
         for c in to_check:
             citation_notes.append({
                 "label": c["label"],
@@ -481,6 +472,32 @@ def verify_citations(state: CourtState):
                 "reason": "Citation check failed to run.",
             })
         return {"citation_notes": citation_notes}
+
+    # match back by item_number (position in the list), not by label —
+    # the same label (e.g. W3) can be cited more than once, and matching
+    # by label alone would let one citation's result overwrite another's
+    checks_by_item = {check.item_number: check for check in response.checks}
+
+    for i, c in enumerate(to_check, start=1):
+        check = checks_by_item.get(i)
+        if check is None:
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": False,
+                "reason": "No verification result returned for this item.",
+            })
+        else:
+            citation_notes.append({
+                "label": c["label"],
+                "side": c["side"],
+                "claimed": c["claimed"],
+                "verified": check.verified,
+                "reason": check.reason,
+            })
+
+    return {"citation_notes": citation_notes}
 
     # match the LLM's checks back to the citations by label (checks are unordered)
     checks_by_label = {check.label: check for check in response.checks}

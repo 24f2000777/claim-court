@@ -31,7 +31,7 @@ Honesty rules:
 - Do not give a verdict or a confidence score. That is the Judge's job.
 - Argue only against the claim. Never argue for it, even when summarizing a source that supports it.
 
-Format: plain text, 3 to 5 short points, under 200 words in total. Each point starts with the weakness in one line, followed by one or two sentences of explanation and the evidence label in brackets. A response of only one sentence confirming the claim's number is a failure, not a valid case. If you catch yourself about to write that, stop and use the rules above to find a real weakness instead."""
+Format: 3 to 5 bullets, under 200 words in total. Write each point as its own bullet, starting the line with "- ". Do not use bold text, headers, or em dashes anywhere. Each bullet should read as one or two natural, plainly worded sentences, not a bolded label followed by an explanation. Leave a blank line between bullets so they render as a proper list. Each bullet ends with the evidence label in brackets. A response of only one sentence confirming the claim's number is a failure, not a valid case. If you catch yourself about to write that, stop and use the rules above to find a real weakness instead."""
 # ============================================================
 # DEFENDER PROMPT (argues the claim is true/defensible)
 # ============================================================
@@ -64,7 +64,8 @@ Honesty rules:
 - Do not give a verdict or a confidence score. That is the Judge's job.
 - Argue only for the claim. Never argue against it.
 
-Format: plain text, 3 to 5 short points, under 200 words in total. Each point starts with the supporting argument in one line, followed by one or two sentences of explanation and the evidence label in brackets. A response of only one sentence confirming the claim's number is a failure, not a valid case. If you write "No honest defence found", the format is just that line plus one sentence."""
+Format: 3 to 5 bullets, under 200 words in total. Write each point as its own bullet, starting the line with "- ". Do not use bold text, headers, or em dashes anywhere. Each bullet should read as one or two natural, plainly worded sentences, not a bolded label followed by an explanation. Leave a blank line between bullets so they render as a proper list. Each bullet ends with the evidence label in brackets. A response of only one sentence confirming the claim's number is a failure, not a valid case. If you write "No honest defence found", the format is just that line plus one sentence.
+"""
 # ============================================================
 # JUDGE PROMPT (weighs both cases and produces the verdict)
 # ============================================================
@@ -96,31 +97,34 @@ Confidence:
 
 Reasoning: write 2 to 3 sentences. Name the strongest point from each side, with its label, and say which one decided the outcome."""
 
-doc_grader_prompt = """You are an evidence grader in a fact-checking system. You are given a claim and a numbered list of chunks retrieved from the document the claim came from. Grade how useful each chunk is for checking the claim.
+doc_grader_prompt = """You are grading document chunks for relevance to a factual claim.
 
-Grades:
-- relevant: the chunk is on the claim's topic and contains a figure, date, definition or statement that can be compared with the claim (for example the same market, the same metric, or the same time period).
-- ambiguous: the chunk is on the general topic but is too vague, incomplete, or about a different segment or metric to compare with the claim directly.
-- irrelevant: the chunk is off-topic (for example a table or paragraph about something the claim does not mention).
+Claim: {claim}
 
-Rules:
-1. Grade every chunk in the list. Do not skip any and do not add chunks that were not given.
-2. Judge only relevance to the claim's topic. Do not judge whether the chunk proves or disproves the claim, and do not judge whether the chunk is true.
-3. Output only the item number, the grade, and one short sentence as the reason. Never copy or rewrite the chunk text.
-4. Grade each chunk on its own. Do not give every chunk the same grade just to be safe."""
+Below are {count} document chunks, each numbered. For EACH chunk, decide if it is:
+- "relevant": directly helps confirm or deny the claim
+- "ambiguous": related to the topic but doesn't directly confirm or deny it
+- "irrelevant": unrelated to the claim
 
-web_grader_prompt = """You are an evidence grader in a fact-checking system. You are given a claim and a numbered list of web search results. Grade how useful each result is for independently checking the claim.
+Chunks:
+{items}
 
-Grades:
-- relevant: the result is on the claim's topic and the same segment (for example online grocery, not total grocery), and gives a figure, date or statement that can be compared with the claim. It must come from a source other than the claim's own original document.
-- ambiguous: the result is on the general topic but covers a different or larger segment (for example total grocery market when the claim is about online grocery), or is too vague to compare directly.
-- irrelevant: the result is off-topic, OR it is the claim's own original source. The claim comes from a USDA report (apps.fas.usda.gov); any result from that report or restating its text is irrelevant because it cannot verify itself.
+Return a grade for EVERY chunk listed above (item_number 1 through {count}), each with one short reasoning sentence. Do not skip any."""
 
-Rules:
-1. Grade every result. Do not skip any and do not add results that were not given.
-2. Judge topic, segment and independence only. Do not judge whether the result proves or disproves the claim.
-3. Output only the item number, the grade, and one short sentence as the reason. Never copy or rewrite the result text.
-4. Grade each result on its own. Do not give every result the same grade."""
+web_grader_prompt = """You are grading web search results for relevance to a factual claim.
+
+Claim: {claim}
+
+Below are {count} web search results, each numbered. For EACH result, decide if it is:
+- "relevant": directly helps confirm or deny the claim, and is independent of the claim's own original source
+- "ambiguous": related to the topic but doesn't directly confirm or deny it
+- "irrelevant": unrelated to the claim, or is the same source the claim itself came from
+
+Results:
+{items}
+
+Return a grade for EVERY result listed above (item_number 1 through {count}), each with one short reasoning sentence. Do not skip any."""
+
 
 # ============================================================
 # QUERY WRITER PROMPT (writes neutral web search queries)
@@ -147,7 +151,7 @@ Grades:
 - verified=false: the evidence text says something different, says nothing about this specific point, or is being used out of context (for example the evidence gives a rate but the lawyer's sentence claims a total, or the evidence is about a different segment or time period than the sentence implies).
 
 Rules:
-1. Check every item in the list. Do not skip any and do not add items that were not given.
+1. Check every item in the list. Do not skip any and do not add items that were not given. Always return the item_number exactly as given, even when two items share the same label.
 2. Compare only the sentence to its own cited evidence. Do not use outside knowledge, and do not judge whether the underlying claim is true or false, only whether the citation is accurate.
 3. Output only the label, verified, and one short sentence comparing what was claimed to what the evidence actually says. Never copy or rewrite the full evidence text.
 4. Judge each item on its own. Do not mark everything verified just to be safe, and do not mark everything unverified just to be cautious."""

@@ -50,43 +50,22 @@ class CourtState(TypedDict):
     evidence_ok: bool
     citation_notes: list[dict]
 
-    
+
 
 class ItemGrade(BaseModel):
-    item_number: int = Field(
-        description="The number of the evidence item as given in the input list (1, 2, 3, ...)"
-    )
-    grade: Literal["relevant", "ambiguous", "irrelevant"] = Field(
-        description=(
-            "'relevant' if the item is on the claim's topic and gives a figure, date or "
-            "statement that can be compared with the claim. "
-            "'ambiguous' if it is on the topic but too vague or incomplete to use. "
-            "'irrelevant' if it is off-topic, or is only the claim's own original source "
-            "restating the claim."
-        )
-    )
-    reason: str = Field(description="One short sentence explaining the grade")
-
+    item_number: int = Field(description="The number of the evidence item being graded, matching its position in the numbered list given in the prompt")
+    grade: str = Field(description="One of: relevant, ambiguous, irrelevant")
+    reasoning: str = Field(description="One short sentence explaining why this grade was given")
 
 class EvidenceGrades(BaseModel):
-    grades: list[ItemGrade] = Field(
-        description="One grade for every evidence item number given in the input"
-    )
+    grades: list[ItemGrade] = Field(description="Exactly one ItemGrade per evidence item, in any order — matched back by item_number")
 
 
 class CitationCheck(BaseModel):
-    label: str = Field(
-        description="The evidence label being checked, for example W1 or D2, exactly as it appeared in the case."
-    )
-    verified: bool = Field(
-        description="True if the evidence text actually supports or contains what the lawyer's sentence claimed. False if the evidence says something different, says nothing about it, or is used out of context."
-    )
-    reason: str = Field(
-        description="One short sentence comparing what was claimed to what the evidence actually says."
-    )
-
+    item_number: int = Field(description="The number of the citation being checked, matching its position in the numbered list given in the prompt")
+    label: str = Field(description="The evidence label this citation used, for example W3 or D1")
+    verified: bool = Field(description="True if the evidence supports what the lawyer claimed, False otherwise")
+    reason: str = Field(description="One short sentence comparing what was claimed to what the evidence actually says")
 
 class CitationChecks(BaseModel):
-    checks: list[CitationCheck] = Field(
-        description="One verification result for every label that was checked."
-    )
+    checks: list[CitationCheck] = Field(description="Exactly one CitationCheck per citation, in any order — matched back by item_number")

@@ -10,11 +10,21 @@ RESULTS_PATH = "eval/results.json"
 GAP_SECONDS = 30  # pause between claims so the per-minute token limit resets
 
 
+# ============================================================
+# 1. json helpers (load claims / cached results)
+# ============================================================
+
+
 def load_json(path, default):
     if os.path.exists(path):
         with open(path) as f:
             return json.load(f)
     return default
+
+
+# ============================================================
+# 2. run a single claim through the court graph
+# ============================================================
 
 
 def run_one(claim):
@@ -27,6 +37,11 @@ def run_one(claim):
         "retries": response.get("retry_count", 0),
         "web_items": len(response.get("web_evidence", [])),
     }
+
+
+# ============================================================
+# 3. summary (accuracy by source, plus error count)
+# ============================================================
 
 
 def print_summary(claims, results):
@@ -57,6 +72,11 @@ def print_summary(claims, results):
         print(f"OVERALL: {total_correct}/{total} = {total_correct / total:.0%}")
     if errors:
         print(f"errors (not counted): {errors}")
+
+
+# ============================================================
+# 4. main loop (run every claim, save after each, print summary)
+# ============================================================
 
 
 def main():

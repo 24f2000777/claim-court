@@ -1,5 +1,7 @@
-from langgraph.graph import END, START, StateGraph
+import sqlite3
 
+from langgraph.graph import END, START, StateGraph
+from langgraph.checkpoint.sqlite import SqliteSaver
 from nodes import (
     defender,
     grade_doc,
@@ -59,4 +61,7 @@ graph.add_edge("defender", "judge_node")
 graph.add_edge("judge_node", "verify_citations")
 graph.add_edge("verify_citations", END)
 
-court_graph = graph.compile()
+
+conn=sqlite3.connect("checkpoint.db",check_same_thread=False)
+checkpointer=SqliteSaver(conn=conn)
+court_graph = graph.compile(checkpointer=checkpointer,interrupt_before=["judge_node"])
