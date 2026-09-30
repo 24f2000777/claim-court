@@ -6,4 +6,5 @@ ingestion/__pycache__/
 my_chroma_db/
 show_graph.py
 checkpoint.db
-graph.pngdata/uploaded_doc.pdf
+graph.png
+data/uploaded_doc.pdf
