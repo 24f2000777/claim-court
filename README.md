@@ -12,14 +12,34 @@ Two AI lawyers argue opposite sides from the same evidence. A judge rules. An au
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![Chroma](https://img.shields.io/badge/Chroma-Vector%20DB-0B8F82?style=for-the-badge)
 ![Cost](https://img.shields.io/badge/Cost-100%25%20Free-2EA043?style=for-the-badge)
+[![Live demo](https://img.shields.io/badge/Live%20demo-Open%20the%20app-5B3FD6?style=for-the-badge)](https://claim-court-ai.streamlit.app)
 
 ![supported](https://img.shields.io/badge/verdict-supported-0B8F82?style=flat-square)
 ![disputed](https://img.shields.io/badge/verdict-disputed-B9770A?style=flat-square)
 ![unsupported](https://img.shields.io/badge/verdict-unsupported-D6304A?style=flat-square)
 
-[What it does](#-what-it-does) · [Architecture](#-architecture) · [Design decisions](#-design-decisions) · [Getting started](#-getting-started) · [Deploy](#-deploy-to-streamlit-community-cloud) · [Evaluation](#-evaluation) · [Roadmap](#-roadmap)
+[Try it live](#-try-it-live) · [What it does](#-what-it-does) · [Architecture](#-architecture) · [Design decisions](#-design-decisions) · [Getting started](#-getting-started) · [Deploy](#-deploy-to-streamlit-community-cloud) · [Evaluation](#-evaluation) · [Roadmap](#-roadmap)
 
 </div>
+
+---
+
+## 🌐 Try it live
+
+**Live app:** https://claim-court-ai.streamlit.app
+
+**Access code:** `Claim_Court`
+
+The app asks for the access code before anything runs. Enter it, then:
+
+1. Type a claim, or upload a PDF and pick one of the riskiest claims it finds.
+2. Click **Run Trial** and watch the evidence being gathered and graded.
+3. Read the Prosecutor's and Defender's cases, then send them to the Judge, send them back with feedback, or decline.
+4. Read the verdict and the citation check, then ask follow-up questions in the chat.
+
+Good claims to try: "Coffee is good for health." or "Humans use only 10 percent of their brains."
+
+The demo runs on shared free API quotas. If you see an "AI service is busy" message, wait the time shown and press **Try again**. The app may take a minute to wake up if nobody has used it for a while.
 
 ---
 
