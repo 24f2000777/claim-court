@@ -44,6 +44,7 @@ class CourtState(TypedDict):
     defender_case: str
     verdict: VerdictClass
 
+    doc_collection: str  # which document collection to search (the bundled report when empty)
     search_query: str
     retry_count: int
     doc_evidence: list[dict]

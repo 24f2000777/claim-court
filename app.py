@@ -1,5 +1,7 @@
+import hmac
 import logging
 import os
+import tempfile
 import uuid
 
 import streamlit as st
@@ -17,7 +19,7 @@ from ingestion.nodes import (
     select_top_claims,
 )
 from nodes import MAX_REVIEW_ROUNDS, RateLimitError, is_daily_limit, is_rate_limit, wait_hint
-from retrieval.vectorstore import set_active_document
+from retrieval.vectorstore import add_uploaded_document
 from state import VerdictClass
 
 load_dotenv()
@@ -70,6 +72,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# optional access code, set APP_PASSWORD to protect a shared deployment's API quota
+app_password = os.getenv("APP_PASSWORD")
+if app_password and not st.session_state.get("authenticated"):
+    st.title("⚖️ Claim Court")
+    entered = st.text_input("Access code", type="password")
+    if entered:
+        if hmac.compare_digest(entered.encode(), app_password.encode()):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        st.error("That access code is not correct.")
+    st.stop()
+
 st.title("⚖️ Claim Court")
 st.markdown('<p class="subtitle">An adversarial multi-agent fact-checking trial</p>', unsafe_allow_html=True)
 
@@ -116,18 +130,18 @@ if uploaded_file is not None and st.session_state.get("last_uploaded_name") != u
     st.session_state["last_uploaded_name"] = uploaded_file.name
     st.session_state.pop("uploaded_ranked_claims", None)  # clear any previous upload's claims
 
-    os.makedirs("data", exist_ok=True)
-    save_path = os.path.join("data", "uploaded_doc.pdf")
-    with open(save_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    st.session_state.pop("doc_collection", None)
 
     with st.status("Processing your document...", expanded=True) as status:
         try:
             status.write("📄 Reading and chunking the PDF...")
-            new_chunks = load_and_chunk_pdf(save_path)
+            with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:  # the upload is not kept on disk
+                tmp.write(uploaded_file.getbuffer())
+                tmp.flush()
+                new_chunks = load_and_chunk_pdf(tmp.name)
 
-            status.write(f"🔎 Rebuilding the search index ({len(new_chunks)} chunks)...")
-            set_active_document(new_chunks)
+            status.write(f"🔎 Building the search index ({len(new_chunks)} chunks)...")
+            st.session_state["doc_collection"] = add_uploaded_document(new_chunks)
 
             # cap chunks sent to the LLM extractor to keep this free-tier friendly on large PDFs
             capped_chunks = new_chunks[:30]
@@ -421,10 +435,14 @@ if run_clicked:
     st.session_state.pop("backend_error", None)
     st.query_params["thread"] = thread_id
 
+    trial_input = {"claim": claim_text}
+    if st.session_state.get("uploaded_ranked_claims") and st.session_state.get("doc_collection"):
+        trial_input["doc_collection"] = st.session_state["doc_collection"]
+
     trial_failed = False
     with st.status("Running the trial...", expanded=True) as status:
         try:
-            for update in court_graph.stream({"claim": claim_text}, config=config, stream_mode="updates"):
+            for update in court_graph.stream(trial_input, config=config, stream_mode="updates"):
                 for node_name, node_output in update.items():
                     if node_name in STAGE_LABELS:
                         status.write(STAGE_LABELS[node_name])

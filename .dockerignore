@@ -1,0 +1,12 @@
+venv/
+.git/
+__pycache__/
+*.pyc
+.env
+*.db
+*.db-shm
+*.db-wal
+my_chroma_db/
+graph.png
+show_graph.py
+eval/archive/

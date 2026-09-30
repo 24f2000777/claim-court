@@ -1,8 +1,10 @@
-from sentence_transformers import SentenceTransformer
-from ingestion.nodes import chunks as default_chunks
+import time
+import uuid
+
 import chromadb
 from chromadb.utils import embedding_functions
-from langchain_core.tools import tool
+
+from ingestion.nodes import chunks as default_chunks
 
 # ============================================================
 # CHROMA SETUP (persisted client; collections are built per-document)
@@ -22,7 +24,9 @@ def build_vectorstore(chunks, collection_name):
     except Exception:
         pass  # collection didn't exist yet, nothing to delete
 
-    new_collection = client.get_or_create_collection(name=collection_name, embedding_function=embedding_fn)
+    new_collection = client.get_or_create_collection(
+        name=collection_name, embedding_function=embedding_fn, metadata={"created": time.time()}
+    )
 
     texts = [chunk["text"] for chunk in chunks]
     ids = [f"chunk_{i}" for i in range(len(chunks))]
@@ -32,31 +36,39 @@ def build_vectorstore(chunks, collection_name):
     return new_collection
 
 
-# default collection, built from the bundled USDA document at import time (backward compatible)
-collection = build_vectorstore(default_chunks, collection_name="usda_qcommerce")
+# bundled USDA document, built at import time and used when nothing has been uploaded
+DEFAULT_COLLECTION = "usda_qcommerce"
+build_vectorstore(default_chunks, collection_name=DEFAULT_COLLECTION)
+
+MAX_UPLOADED_COLLECTIONS = 20  # oldest uploads are dropped so a shared deployment does not grow forever
 
 
-def set_active_document(chunks):
-    """Rebuilds the vectorstore from a new document's chunks and points retrieve_top_chunks at it.
-    Called when the user uploads a new PDF in the UI."""
-    global collection
-    collection = build_vectorstore(chunks, collection_name="uploaded_doc")
+def add_uploaded_document(chunks):
+    """Indexes an uploaded document in its own collection and returns the collection name.
+    Each upload gets a separate collection, so visitors never overwrite each other's documents."""
+    name = f"uploaded_{uuid.uuid4().hex[:12]}"
+    build_vectorstore(chunks, collection_name=name)
+
+    uploaded = [c for c in client.list_collections() if c.name.startswith("uploaded_")]
+    uploaded.sort(key=lambda c: (c.metadata or {}).get("created", 0))
+    for old in uploaded[:-MAX_UPLOADED_COLLECTIONS]:
+        client.delete_collection(name=old.name)
+    return name
 
 
 # ============================================================
-# RETRIEVAL TOOL (exposed to the prosecutor agent)
+# RETRIEVAL
 # ============================================================
 
-@tool
-def retrieve_top_chunks(query: str):
-    """Search the active document for text relevant to a query. Use this to find supporting or contradicting evidence from the source document."""
+def retrieve_top_chunks(query: str, collection_name: str = DEFAULT_COLLECTION):
+    """Returns the 3 chunks of the named document collection that best match the query."""
+    collection = client.get_collection(name=collection_name, embedding_function=embedding_fn)
     result = collection.query(query_texts=[query], n_results=3)
 
-    chunk_found = []
-    for text, meta in zip(result["documents"][0], result["metadatas"][0]):
-        chunk_found.append({"page": meta["page"], "text": text})
-
-    return chunk_found
+    return [
+        {"page": meta["page"], "text": text}
+        for text, meta in zip(result["documents"][0], result["metadatas"][0])
+    ]
 
 
 if __name__ == "__main__":

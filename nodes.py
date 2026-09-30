@@ -17,7 +17,7 @@ from prompt import (
     chat_prompt,
     reviewer_note_block,
 )
-from retrieval.vectorstore import retrieve_top_chunks
+from retrieval.vectorstore import DEFAULT_COLLECTION, retrieve_top_chunks
 from retrieval.websearch import web_search_tool
 from state import CourtState, EvidenceGrades, VerdictClass,CitationChecks
 
@@ -215,7 +215,7 @@ def resolve_label(label, state):
 
 def retrieve_docs(state: CourtState):
     try:
-        chunks = retrieve_top_chunks.invoke(state["claim"])
+        chunks = retrieve_top_chunks(state["claim"], state.get("doc_collection") or DEFAULT_COLLECTION)
     except Exception as e:
         print(f"Document retrieval failed: {e}")
         return {"doc_evidence": []}

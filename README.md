@@ -1,3 +1,12 @@
+---
+title: Claim Court
+emoji: ⚖️
+colorFrom: purple
+colorTo: red
+sdk: docker
+pinned: false
+---
+
 <div align="center">
 
 # ⚖️ Claim Court
@@ -17,7 +26,7 @@ Two AI lawyers argue opposite sides from the same evidence. A judge rules. An au
 ![disputed](https://img.shields.io/badge/verdict-disputed-B9770A?style=flat-square)
 ![unsupported](https://img.shields.io/badge/verdict-unsupported-D6304A?style=flat-square)
 
-[What it does](#-what-it-does) · [Architecture](#-architecture) · [Design decisions](#-design-decisions) · [Getting started](#-getting-started) · [Evaluation](#-evaluation) · [Roadmap](#-roadmap)
+[What it does](#-what-it-does) · [Architecture](#-architecture) · [Design decisions](#-design-decisions) · [Getting started](#-getting-started) · [Deploy](#-deploy-to-hugging-face-spaces) · [Evaluation](#-evaluation) · [Roadmap](#-roadmap)
 
 </div>
 
@@ -333,6 +342,7 @@ claim-court/
 │   └── results.json    Saved results
 ├── data/               Bundled USDA report and its cached claim ranking
 ├── requirements.txt
+├── Dockerfile          Container recipe for Hugging Face Spaces
 ├── .env.example        Template for the three keys the app needs
 └── .streamlit/config.toml
 ```
@@ -388,6 +398,8 @@ TAVILY_API_KEY=your_tavily_key
 MODEL_NAME=openai/gpt-oss-120b
 ```
 
+Optionally add `APP_PASSWORD=some_code` to make the app ask for an access code first.
+
 The first run downloads the embedding model, so allow a minute before anything appears.
 
 ---
@@ -440,6 +452,35 @@ flowchart LR
     class C0,C1,C2,C3,C4,C5 a
     class F1 f
 ```
+
+---
+
+## ☁️ Deploy to Hugging Face Spaces
+
+The repo includes a `Dockerfile`, so it runs on a free Hugging Face Space (CPU basic, about 16 GB of RAM, which is plenty for the embedding model). The block of settings at the very top of this README is what Hugging Face reads, so keep it there.
+
+1. **Create the Space.** On [huggingface.co/new-space](https://huggingface.co/new-space) choose the **Docker** SDK, the **Blank** template and the free **CPU basic** hardware.
+2. **Add your keys as secrets.** In the Space, open **Settings**, then **Variables and secrets**, and add these as **secrets**, not variables:
+   - `GROQ_API_KEY`
+   - `TAVILY_API_KEY`
+   - `MODEL_NAME` (set it to `openai/gpt-oss-120b`)
+   - `APP_PASSWORD` (optional, asks for an access code before anyone can use the app, which protects your free API quota)
+3. **Push the code.** Create a Hugging Face access token with write permission, then push this repo to the Space:
+
+```bash
+git remote add space https://huggingface.co/spaces/YOUR_USERNAME/claim-court
+git push space main
+```
+
+   Use your username and the token as the password when git asks. Never put the token in a file in the repo.
+4. **Wait for the build.** The first build takes several minutes because it installs the dependencies and downloads the embedding model. The Space shows the build log, and the app opens when it turns green.
+
+What to expect on a free Space:
+
+- Saved conversations live on temporary disk, so they are lost when the Space restarts or is rebuilt.
+- The Space sleeps after a couple of days without visitors and wakes on the next visit.
+- Every visitor shares your API keys. Each visitor's uploaded PDF is kept separate, and uploads are not stored as files.
+- Reopening a conversation from the page URL works on the direct `*.hf.space` link, and may not work inside the embedded frame on the Space page.
 
 ---
 
