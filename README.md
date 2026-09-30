@@ -36,7 +36,7 @@ You give it a claim, either typed in or extracted automatically from a PDF you u
 | 📝 | Grades every piece of evidence as relevant, ambiguous or irrelevant |
 | 🔁 | Rewrites the search query and retries if the evidence is weak, up to two times |
 | 🗡️ | The **Prosecutor** argues the claim is false while the **Defender** argues it is true, in parallel |
-| ✋ | Pauses so a human can read both cases before anything is decided |
+| ✋ | Pauses so a human can read both cases, then approve, send them back with feedback, or decline |
 | 👨‍⚖️ | The **Judge** returns `supported`, `disputed` or `unsupported`, with reasoning and confidence |
 | 🧾 | A citation audit checks each citation against the evidence it points to |
 | 💬 | You can then chat about the trial, with streamed answers grounded in the saved record |
@@ -58,9 +58,12 @@ flowchart TD
     RW --> WS
     GW -- "evidence ok" --> P[Prosecutor]
     GW -- "evidence ok" --> D[Defender]
-    P --> J[Judge]
-    D --> J
-    J -. "human review pause" .-> J
+    P --> H{{"Human review"}}
+    D --> H
+    H -- "approve" --> J[Judge]
+    H -- "send back with feedback, max 2 rounds" --> P
+    H -- "send back with feedback, max 2 rounds" --> D
+    H -- "decline" --> X([Stopped, no verdict])
     J --> V[verify_citations]
     V --> END([Verdict and audit])
 
@@ -74,6 +77,7 @@ flowchart TD
     class P pros
     class D def
     class J,V judge
+    class H,X edge
     class START,END edge
 ```
 
@@ -121,7 +125,14 @@ sequenceDiagram
     end
     P-->>U: Prosecution case
     D-->>U: Defense case
-    U->>J: Approve (human checkpoint)
+    alt Human checkpoint
+        U->>J: Approve
+    else Send back
+        U->>P: Feedback note (max 2 rounds)
+        U->>D: Feedback note (max 2 rounds)
+    else Decline
+        U-->>U: Trial stops with no verdict
+    end
     J->>J: Weigh both cases
     J-->>A: Verdict plus both cases
     A->>A: Check every citation against its evidence
@@ -227,6 +238,12 @@ The Judge, the graders and the citation checker return Pydantic objects. The sma
 <summary><b>✂️ Lawyer output is constrained</b></summary>
 
 Each lawyer writes 3 to 5 bullets, under 200 words, with no bold text, no headers and one sentence per bullet, each ending with its evidence label in brackets. That keeps citations parseable and the two cases easy to compare.
+</details>
+
+<details>
+<summary><b>✋ The human checkpoint has three exits</b></summary>
+
+At the pause before the judge you can approve, send the cases back, or decline. **Send back** re-runs only the two lawyers, starting from the checkpoint just before they last ran, with your note added to their input. Retrieval and grading are not repeated, which saves quota. It is capped at 2 rounds because each round costs two model calls, and the earlier cases stay in the checkpoint history for time travel. **Decline** records `review_status = "declined"` in the graph state, shows a banner, keeps the trial in the sidebar with a mark, and can be undone with **Reopen**. Both actions use LangGraph's `update_state`, so they survive a page refresh.
 </details>
 
 <details>
@@ -390,7 +407,7 @@ In the app you can:
 1. Upload a PDF and let it extract and rank the riskiest claims, or type your own claim.
 2. Run the trial and watch live progress as each node finishes.
 3. Read the Prosecutor's and Defender's cases.
-4. Send the case to the Judge for a verdict.
+4. Send the case to the Judge for a verdict, send it back to the lawyers with feedback (up to 2 rounds), or decline to send it. A declined trial can be reopened later.
 5. Review the citation check, then ask follow-up questions in the chat box. Answers stream in and use only the trial record (claim, labelled evidence, both cases, verdict and citation check).
 
 Conversations are saved automatically. The sidebar has a **New conversation** button and a **Past conversations** list. Click one to resume it with its cases, verdict and full chat, or use the bin icon to delete it. The trial's thread ID is kept in the page URL, so a browser refresh reopens the same conversation.
@@ -470,7 +487,7 @@ The harness is resumable. If the Groq daily quota runs out partway through, run 
 | `No module named 'torchvision'` in the Streamlit log | Streamlit's file watcher introspects `transformers` submodules | Harmless, silenced by `fileWatcherType = "none"` in `.streamlit/config.toml` |
 | `Deserializing unregistered type state.VerdictClass` when loading a past trial | LangGraph checkpointer forward-compatibility notice | Safe to ignore |
 | A chat question shows an error and no answer | Groq rate limit or a model failure during the chat turn | The question stays in the history. Ask again |
-| The chat box is missing | Chat opens only after the judge rules | Send the case to the Judge first |
+| The chat box is missing | Chat opens only after the judge rules, and a declined trial has no verdict | Send the case to the Judge first, or press Reopen on a declined trial |
 | Rate limit messages or skipped claims | Groq free-tier daily quota | Wait and rerun, the eval harness resumes automatically |
 
 ---

@@ -36,7 +36,7 @@ claim-court/
 ## Graph flow
 retrieve_docs → grade_doc → web_search → grade_web → (rewrite loop if evidence weak) → prosecutor + defender (parallel) → judge_node (interrupt here for human review) → verify_citations → END
 
-A conditional edge at START (`route_start`) sends a chat message on a finished trial to `chat_node → END`. Chat history lives in `CourtState.messages` (`add_messages`) and is saved by the SQLite checkpointer, so there is no separate chat database.
+At the pause before the judge the human can approve, send the cases back with feedback (`reviewer_note`, max `MAX_REVIEW_ROUNDS` = 2, re-runs only the lawyers via `update_state(..., as_node="grade_web")`), or decline (`review_status = "declined"`, reversible). A conditional edge at START (`route_start`) sends a chat message on a finished trial to `chat_node → END`. Chat history lives in `CourtState.messages` (`add_messages`) and is saved by the SQLite checkpointer, so there is no separate chat database.
 
 ## Key design decisions
 - Retrieval is deterministic and pre-graded (not agent tool-calling) — grading uses batched LLM calls (one call per stage, not per-chunk) to conserve Groq free-tier quota.

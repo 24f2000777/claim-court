@@ -15,6 +15,7 @@ from prompt import (
     web_grader_prompt,
     citation_check_prompt,
     chat_prompt,
+    reviewer_note_block,
 )
 from retrieval.vectorstore import retrieve_top_chunks
 from retrieval.websearch import web_search_tool
@@ -30,6 +31,7 @@ load_dotenv()
 MODEL_NAME = os.getenv("MODEL_NAME")
 SECONDARY_MODEL = "openai/gpt-oss-20b"  # Groq fallback, different daily quota than MODEL_NAME
 MAX_RETRIES = 2
+MAX_REVIEW_ROUNDS = 2  # times a human can send the cases back to the lawyers
 CHAT_HISTORY_LIMIT = 20  # most recent chat messages sent to the model
 DEBUG = True
 
@@ -323,15 +325,22 @@ def format_web_items(results):
 # ============================================================
 
 
-def prosecutor(state: CourtState):
-    evidence = format_evidence(state)
+# the lawyers' input: claim and evidence, plus the reviewer's feedback when the cases were sent back
+def lawyer_input(state: CourtState):
+    text = f"Claim: {state['claim']}\n\nEvidence:\n{format_evidence(state)}"
+    note = state.get("reviewer_note", "").strip()
+    if note:
+        text += reviewer_note_block.format(note=note)
+    return text
 
+
+def prosecutor(state: CourtState):
     try:
         response = call_with_retry(
             prosecutor_model,
             [
                 SystemMessage(content=prosecutor_prompt),
-                HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
+                HumanMessage(content=lawyer_input(state)),
             ],
             fallback_model=prosecutor_fallback,
         )
@@ -351,14 +360,12 @@ def prosecutor(state: CourtState):
 
 
 def defender(state: CourtState):
-    evidence = format_evidence(state)
-
     try:
         response = call_with_retry(
             defender_model,
             [
                 SystemMessage(content=defender_prompt),
-                HumanMessage(content=f"Claim: {state['claim']}\n\nEvidence:\n{evidence}"),
+                HumanMessage(content=lawyer_input(state)),
             ],
             fallback_model=defender_fallback,
         )

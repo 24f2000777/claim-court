@@ -15,6 +15,7 @@ from ingestion.nodes import (
     ranker,
     select_top_claims,
 )
+from nodes import MAX_REVIEW_ROUNDS
 from retrieval.vectorstore import set_active_document
 from state import VerdictClass
 
@@ -190,18 +191,45 @@ def sync_from_checkpoint(thread_id):
         verdict=verdict,
         citation_notes=values.get("citation_notes", []),
         judge_done=verdict is not None,
+        review_status=values.get("review_status", "pending"),
+        review_rounds=values.get("review_rounds", 0),
     )
     st.query_params["thread"] = thread_id  # a page refresh reopens this trial
     return True
 
 
-TRIAL_KEYS = ["thread_id", "trial_started", "judge_done", "claim_text", "prosecutor_case", "defender_case", "verdict", "citation_notes"]
+TRIAL_KEYS = ["thread_id", "trial_started", "judge_done", "claim_text", "prosecutor_case", "defender_case", "verdict", "citation_notes", "review_status", "review_rounds"]
 
 
 def new_conversation():
     for key in TRIAL_KEYS:
         st.session_state.pop(key, None)
     st.query_params.clear()
+
+
+def set_review_status(thread_id, status):
+    # as_node="defender" records the change without moving the graph off its pause before the judge
+    court_graph.update_state({"configurable": {"thread_id": thread_id}}, {"review_status": status}, as_node="defender")
+
+
+def send_back_to_lawyers(thread_id, note):
+    """Re-runs both lawyers with the reviewer's note, starting from the checkpoint just before they last ran."""
+    config = {"configurable": {"thread_id": thread_id}}
+    before_lawyers = next(
+        snap for snap in court_graph.get_state_history(config) if set(snap.next) == {"prosecutor", "defender"}
+    )
+    rounds = court_graph.get_state(config).values.get("review_rounds", 0) + 1
+    fork_config = court_graph.update_state(
+        before_lawyers.config,
+        {"reviewer_note": note, "review_rounds": rounds, "review_status": "pending"},
+        as_node="grade_web",
+    )
+    with st.status("Sending the cases back to the lawyers...", expanded=True) as status:
+        for update in court_graph.stream(None, config=fork_config, stream_mode="updates"):
+            for node_name in update:
+                if node_name in STAGE_LABELS:
+                    status.write(STAGE_LABELS[node_name])
+        status.update(label="Both sides have revised their case.", state="complete")
 
 
 def stream_answer(question, config):
@@ -241,6 +269,8 @@ with st.sidebar:
             row_open, row_delete = st.columns([5, 1])
             is_current = tid == st.session_state.get("thread_id")
             claim_label = values["claim"] if len(values["claim"]) <= 42 else values["claim"][:40] + "..."
+            if values.get("review_status") == "declined":
+                claim_label = "🚫 " + claim_label
             if row_open.button(claim_label, key=f"open_{tid}", type="primary" if is_current else "secondary", use_container_width=True):
                 if sync_from_checkpoint(tid):
                     st.rerun()
@@ -315,6 +345,8 @@ if run_clicked:
     st.session_state["defender_case"] = ""
     st.session_state["verdict"] = None
     st.session_state["citation_notes"] = []
+    st.session_state["review_status"] = "pending"
+    st.session_state["review_rounds"] = 0
     st.query_params["thread"] = thread_id
 
     with st.status("Running the trial...", expanded=True) as status:
@@ -352,25 +384,72 @@ if st.session_state.get("trial_started"):
     # human checkpoint
     # ------------------------------------------------------------
     if not st.session_state["judge_done"]:
-        send_clicked = st.button("Send to Judge for Verdict")
+        thread_id = st.session_state["thread_id"]
+
+        if st.session_state.get("review_status") == "declined":
+            st.warning("You declined to send this case to the judge. No verdict was issued.")
+            if st.button("Reopen"):
+                set_review_status(thread_id, "pending")
+                st.session_state["review_status"] = "pending"
+                st.rerun()
+        else:
+            send_clicked = st.button("Send to Judge for Verdict")
+
+            rounds_used = st.session_state.get("review_rounds", 0)
+            with st.expander("Send back to the lawyers with feedback"):
+                if rounds_used >= MAX_REVIEW_ROUNDS:
+                    st.caption(f"You have used all {MAX_REVIEW_ROUNDS} feedback rounds for this trial.")
+                else:
+                    feedback = st.text_area(
+                        "What should they fix or address?",
+                        key="reviewer_feedback",
+                        placeholder="For example: the Defender ignored W2, and the Prosecutor should not rely on D1.",
+                    )
+                    st.caption(f"Feedback rounds used: {rounds_used} of {MAX_REVIEW_ROUNDS}")
+                    if st.button("Send back"):
+                        if feedback.strip():
+                            try:
+                                send_back_to_lawyers(thread_id, feedback.strip())
+                            except Exception as e:
+                                st.error(f"Could not send the cases back: {e}")
+                            else:
+                                sync_from_checkpoint(thread_id)
+                                st.rerun()
+                        else:
+                            st.error("Write some feedback first.")
+
+            if st.button("Decline to send to the judge"):
+                st.session_state["confirm_decline"] = True
+            if st.session_state.get("confirm_decline"):
+                st.warning("End this trial without a verdict? You can reopen it later.")
+                yes_col, no_col = st.columns(2)
+                if yes_col.button("Yes, decline", key="decline_yes"):
+                    set_review_status(thread_id, "declined")
+                    st.session_state["review_status"] = "declined"
+                    st.session_state.pop("confirm_decline", None)
+                    st.rerun()
+                if no_col.button("Cancel", key="decline_no"):
+                    st.session_state.pop("confirm_decline", None)
+                    st.rerun()
+
+            if send_clicked:
+                config = {"configurable": {"thread_id": thread_id}}
+
+                with st.status("Finalizing verdict...", expanded=True) as status:
+                    for update in court_graph.stream(None, config=config, stream_mode="updates"):
+                        for node_name, node_output in update.items():
+                            if node_name == "judge_node":
+                                status.write("⚖️ Judge is deliberating...")
+                                st.session_state["verdict"] = node_output["verdict"]
+                            elif node_name == "verify_citations":
+                                status.write("📋 Verifying citations...")
+                                st.session_state["citation_notes"] = node_output.get("citation_notes", [])
+                    status.update(label="Verdict reached!", state="complete")
+
+                st.session_state["judge_done"] = True
+                st.rerun()
+
         st.caption("Chat opens after the judge rules.")
-
-        if send_clicked:
-            config = {"configurable": {"thread_id": st.session_state["thread_id"]}}
-
-            with st.status("Finalizing verdict...", expanded=True) as status:
-                for update in court_graph.stream(None, config=config, stream_mode="updates"):
-                    for node_name, node_output in update.items():
-                        if node_name == "judge_node":
-                            status.write("⚖️ Judge is deliberating...")
-                            st.session_state["verdict"] = node_output["verdict"]
-                        elif node_name == "verify_citations":
-                            status.write("📋 Verifying citations...")
-                            st.session_state["citation_notes"] = node_output.get("citation_notes", [])
-                status.update(label="Verdict reached!", state="complete")
-
-            st.session_state["judge_done"] = True
-            st.rerun()
 
     # ------------------------------------------------------------
     # verdict + citation check

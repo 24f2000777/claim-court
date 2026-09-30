@@ -50,6 +50,9 @@ class CourtState(TypedDict):
     web_evidence: list[dict]
     evidence_ok: bool
     citation_notes: list[dict]
+    reviewer_note: str  # human feedback sent back to the lawyers
+    review_rounds: int  # how many times the cases were sent back
+    review_status: str  # "declined" when the human refuses to send the case to the judge
     messages: Annotated[list, add_messages]  # follow-up chat, saved with the trial by the checkpointer
 
 

@@ -176,3 +176,9 @@ Citation check:
 {citations}
 
 When you refer to evidence, use its label, for example W2 or D1. Answer in plain, natural sentences. Do not use bold text, headers, or bullet points unless the person specifically asks for a list."""
+
+
+reviewer_note_block = """
+
+Reviewer feedback on your previous case (address it, but still argue only from the evidence given and keep the same format and word limit):
+{note}"""
