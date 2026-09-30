@@ -10,9 +10,8 @@ from ingestion.nodes import chunks as default_chunks
 # CHROMA SETUP (persisted client; collections are built per-document)
 # ============================================================
 
-embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+# Chroma's built-in ONNX build of all-MiniLM-L6-v2: same model and vectors as sentence-transformers, without torch
+embedding_fn = embedding_functions.DefaultEmbeddingFunction()
 
 client = chromadb.PersistentClient(path="./my_chroma_db")
 

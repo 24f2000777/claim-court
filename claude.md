@@ -6,7 +6,7 @@ Adversarial multi-agent fact-checking system built with LangGraph, RAG, and Groq
 - Orchestration: LangGraph (StateGraph, conditional edges, `defer=True` fan-in)
 - LLM: Groq — `openai/gpt-oss-120b` primary, `openai/gpt-oss-20b` fallback (plain-text roles only)
 - Structured output: Pydantic models via `.with_structured_output()`
-- Document RAG: Chroma vector store + SentenceTransformer embeddings (`all-MiniLM-L6-v2`)
+- Document RAG: Chroma vector store + Chroma's built-in ONNX `all-MiniLM-L6-v2` embeddings (no torch or sentence-transformers)
 - Web search: Tavily Search API
 - UI: Streamlit (`app.py`)
 - Persistence: SQLite checkpointer (`langgraph-checkpoint-sqlite`)
@@ -30,7 +30,7 @@ claim-court/
 │ ├── claims.json # 12-claim eval set with expected labels
 │ ├── run_eval.py # resumable evaluation harness
 │ └── results.json
-└── .streamlit/config.toml # fileWatcherType = "none" (silences transformers/torchvision watcher noise)
+└── .streamlit/config.toml # fileWatcherType = "none"
 
 
 ## Graph flow
@@ -64,7 +64,6 @@ python3 -m eval.run_eval            # resumable 12-claim eval harness
 
 ## Known gotchas
 - `streamlit` CLI command can resolve to the wrong (non-venv) Python — always use `python3 -m streamlit run app.py`.
-- Streamlit's file watcher throws harmless `ModuleNotFoundError: No module named 'torchvision'` while introspecting `transformers` submodules (pulled in via `sentence-transformers`) — silenced via `.streamlit/config.toml` (`fileWatcherType = "none"`). Non-fatal, does not affect app function.
 - `Deserializing unregistered type state.VerdictClass from checkpoint` warning when loading a past trial in `app.py` is a harmless LangGraph checkpointer forward-compat warning — safe to ignore.
 
 ## Status
