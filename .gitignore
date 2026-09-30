@@ -1,10 +1,33 @@
+# Python
 venv/
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets
 .env
-ingestion/__pycache__/
+.env.*
+!.env.example
+
+# Local databases and runtime state
 my_chroma_db/
-show_graph.py
 checkpoint.db
-graph.png
+checkpoint.db-shm
+checkpoint.db-wal
+*.sqlite3
+
+# User uploads
 data/uploaded_doc.pdf
+
+# Generated or scratch files
+graph.png
+show_graph.py
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+*.log
