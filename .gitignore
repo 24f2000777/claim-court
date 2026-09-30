@@ -9,14 +9,15 @@ __pycache__/
 
 # Secrets
 .env
+.streamlit/secrets.toml
 .env.*
 !.env.example
 
 # Local databases and runtime state
 my_chroma_db/
-checkpoint.db
-checkpoint.db-shm
-checkpoint.db-wal
+*.db
+*.db-shm
+*.db-wal
 *.sqlite3
 
 # User uploads

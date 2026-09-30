@@ -39,6 +39,8 @@ You give it a claim, either typed in or extracted automatically from a PDF you u
 | ✋ | Pauses so a human can read both cases before anything is decided |
 | 👨‍⚖️ | The **Judge** returns `supported`, `disputed` or `unsupported`, with reasoning and confidence |
 | 🧾 | A citation audit checks each citation against the evidence it points to |
+| 💬 | You can then chat about the trial, with streamed answers grounded in the saved record |
+| 🗂️ | Every conversation is saved, so you can start a new one, resume an old one or delete it |
 
 ---
 
@@ -106,6 +108,7 @@ sequenceDiagram
     participant D as Defender
     participant J as Judge
     participant A as Auditor
+    participant K as Chat assistant
 
     U->>C: Submit claim
     C->>C: Retrieve, search for and against, grade
@@ -123,6 +126,11 @@ sequenceDiagram
     J-->>A: Verdict plus both cases
     A->>A: Check every citation against its evidence
     A-->>U: Verdict, confidence, citation audit
+    loop Follow-up chat
+        U->>K: Ask a question about the trial
+        K-->>U: Streamed answer from the trial record
+    end
+    Note over U,K: Trial, verdict and chat are all saved under one thread ID
 ```
 
 ### How evidence is gathered
@@ -179,6 +187,7 @@ flowchart TD
 | 🛡️ **Defender** | Argues the claim is true | 3 to 5 bullets, each ending in an evidence label |
 | 👨‍⚖️ **Judge** | Weighs both cases | Label, 2 to 3 sentences of reasoning, confidence from 0 to 1 |
 | 🧾 **Citation auditor** | Checks each citation against its evidence | Verified or failed, with a one-line reason |
+| 💬 **Chat assistant** | Answers follow-up questions after the verdict, using only the trial record | Streamed plain-text answers that cite evidence labels |
 
 ---
 
@@ -221,6 +230,18 @@ Each lawyer writes 3 to 5 bullets, under 200 words, with no bold text, no header
 </details>
 
 <details>
+<summary><b>💬 Chat lives in the graph state</b></summary>
+
+Follow-up messages are stored in `CourtState.messages` (LangGraph's `add_messages` reducer) and saved by the same SQLite checkpointer as the rest of the trial. A conditional edge at `START` (`route_start`) sends a chat message on a finished trial to `chat_node`, and anything else starts a new trial. There is no separate chat database, and one thread ID identifies the trial, its chat, its resume point and its time-travel history.
+</details>
+
+<details>
+<summary><b>🗂️ Conversations are just threads</b></summary>
+
+A conversation is a LangGraph thread. The sidebar lists threads straight from the checkpointer, resuming loads the latest checkpoint, deleting calls the checkpointer's `delete_thread`, and the thread ID in the page URL survives a browser refresh. Chat opens only after the verdict, because a chat message sent while the graph is paused before the judge would start a new run and lose the pending judge step.
+</details>
+
+<details>
 <summary><b>⏱️ Rate limits are handled, not ignored</b></summary>
 
 Model calls retry with backoff (2, 5, 10 and 20 seconds) when Groq returns a rate limit error.
@@ -234,6 +255,7 @@ flowchart LR
         PR[Prosecutor]
         DF[Defender]
         QW2[Query writer]
+        CH2[Chat assistant]
     end
     subgraph STRUCT["Structured-output roles"]
         JG[Judge]
@@ -248,7 +270,7 @@ flowchart LR
     classDef t fill:#0B8F82,stroke:#06574F,color:#fff
     classDef s fill:#5B3FD6,stroke:#3B2696,color:#fff
     classDef x fill:#D6304A,stroke:#8F1E30,color:#fff
-    class PR,DF,QW2,PRIM,FB t
+    class PR,DF,QW2,CH2,PRIM,FB t
     class JG,GR,CC,PRIM2 s
     class SKIP x
 ```
@@ -277,11 +299,13 @@ Everything runs on free tiers. No paid Groq plan is involved or needed.
 ```
 claim-court/
 ├── main.py             CLI entry point, runs one claim through the trial graph
-├── app.py              Streamlit UI: PDF upload, claim extraction, trial, chat, time travel
-├── state.py            CourtState and the Pydantic schemas
+├── app.py              Streamlit UI: PDF upload, claim extraction, trial, chat,
+│                       conversations (new, resume, delete), time travel
+├── state.py            CourtState (including chat messages) and the Pydantic schemas
 ├── prompt.py           Every prompt in one place
-├── nodes.py            Graph nodes: retrieval, grading, lawyers, judge, audit
-├── graph.py            Graph wiring, SQLite checkpointer, human review interrupt
+├── nodes.py            Graph nodes: retrieval, grading, lawyers, judge, audit, chat
+├── graph.py            Graph wiring, SQLite checkpointer, human review interrupt,
+│                       chat routing, saved-thread listing
 ├── ingestion/          PDF loading, chunking, claim extraction, dedup, ranking
 ├── retrieval/
 │   ├── vectorstore.py  Chroma setup, retrieval, uploaded document swapping
@@ -291,6 +315,8 @@ claim-court/
 │   ├── run_eval.py     Resumable evaluation harness
 │   └── results.json    Saved results
 ├── data/               Bundled USDA report and its cached claim ranking
+├── requirements.txt
+├── .env.example        Template for the three keys the app needs
 └── .streamlit/config.toml
 ```
 
@@ -337,7 +363,7 @@ pip install -r requirements.txt
 
 ### Configure
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` (or create it) in the project root:
 
 ```
 GROQ_API_KEY=your_groq_key
@@ -388,11 +414,13 @@ flowchart LR
     C0["Checkpoint 0: start"] --> C1["Checkpoint 1: evidence graded"]
     C1 --> C2["Checkpoint 2: cases written"]
     C2 --> C3["Checkpoint 3: verdict"]
+    C3 --> C4["Checkpoint 4: chat turn 1"]
+    C4 --> C5["Checkpoint 5: chat turn 2"]
     C1 -. "fork and resume" .-> F1["Forked run from checkpoint 1"]
 
     classDef a fill:#5B3FD6,stroke:#3B2696,color:#fff
     classDef f fill:#B9770A,stroke:#7A4E06,color:#fff
-    class C0,C1,C2,C3 a
+    class C0,C1,C2,C3,C4,C5 a
     class F1 f
 ```
 
@@ -441,6 +469,8 @@ The harness is resumable. If the Groq daily quota runs out partway through, run 
 | --- | --- | --- |
 | `No module named 'torchvision'` in the Streamlit log | Streamlit's file watcher introspects `transformers` submodules | Harmless, silenced by `fileWatcherType = "none"` in `.streamlit/config.toml` |
 | `Deserializing unregistered type state.VerdictClass` when loading a past trial | LangGraph checkpointer forward-compatibility notice | Safe to ignore |
+| A chat question shows an error and no answer | Groq rate limit or a model failure during the chat turn | The question stays in the history. Ask again |
+| The chat box is missing | Chat opens only after the judge rules | Send the case to the Judge first |
 | Rate limit messages or skipped claims | Groq free-tier daily quota | Wait and rerun, the eval harness resumes automatically |
 
 ---
@@ -451,6 +481,7 @@ The harness is resumable. If the Groq daily quota runs out partway through, run 
 - [ ] Unit tests for deduplication, `item_number` matching and state handling, with LLM calls mocked
 - [ ] Hybrid keyword and vector retrieval, plus a reranker
 - [ ] Source credibility weighting for web results
+- [ ] Chat before the verdict, without losing the pending judge step
 - [ ] Export a finished trial, citations included, as a shareable report
 
 ---
